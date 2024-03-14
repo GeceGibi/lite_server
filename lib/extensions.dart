@@ -1,5 +1,28 @@
 part of 'lite_server.dart';
 
+extension HttpResponseHelpers on HttpResponse {
+  Future<void> badRequest([String? message]) async {
+    statusCode = HttpStatus.badRequest;
+
+    if (message != null) {
+      reasonPhrase = message;
+    }
+
+    await close();
+  }
+
+  Future<void> ok(Object? body) async {
+    write(body);
+    await close();
+  }
+
+  Future<void> json(String encodedData) async {
+    headers.contentType = ContentType.json;
+    write(encodedData);
+    await close();
+  }
+}
+
 extension HttpRequestHelpers on HttpRequest {
   Future<String> readBodyAsString([Encoding? encoding]) async {
     final encoder = encoding ?? utf8;
