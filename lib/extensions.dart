@@ -1,6 +1,6 @@
 part of 'lite_server.dart';
 
-extension MultipartHelpers on HttpRequest {
+extension HttpRequestHelpers on HttpRequest {
   Future<String> readBodyAsString([Encoding? encoding]) async {
     final encoder = encoding ?? utf8;
     return encoder.decode((await toList()).expand((i) => i).toList());
