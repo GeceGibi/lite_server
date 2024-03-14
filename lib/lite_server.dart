@@ -79,15 +79,15 @@ class LiteServer with LiteLogger {
         );
       }
 
-      if (route.handler == null) {
-        continue;
-      }
-
       final (paths, services) = _genRouteMap(
         route.routes ?? [],
         [...parentServices, ...?route.services],
         [...parentPaths, route.path],
       );
+
+      if (route.handler == null) {
+        continue;
+      }
 
       routeMap[paths.join('/')] = _HttpRouteMapper(route, services);
     }
