@@ -6,6 +6,20 @@ extension HttpRequestHelpers on HttpRequest {
     return encoder.decode((await toList()).expand((i) => i).toList());
   }
 
+  bool get isMultipart {
+    if (headers.contentType == null) {
+      return false;
+    }
+
+    final boundary = headers.contentType!.parameters['boundary'];
+
+    if (boundary == null) {
+      return false;
+    }
+
+    return true;
+  }
+
   Stream<HttpMultiPartData> multipartData() async* {
     if (headers.contentType == null) {
       throw Exception('Content-Type not found');
