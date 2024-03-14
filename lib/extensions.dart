@@ -74,6 +74,7 @@ extension HttpRequestHelpers on HttpRequest {
 
   Map<String, String> parseContentDisposition(String? contentDisposition) {
     final output = <String, String>{};
+    final pattern = RegExp(r'"(.+)"');
 
     if (contentDisposition == null) {
       return output;
@@ -84,7 +85,13 @@ extension HttpRequestHelpers on HttpRequest {
     for (final entry in contentDisposition.split(';')) {
       if (entry.contains('=')) {
         final parsed = entry.split('=');
-        output[parsed.first.trim()] = parsed.last.trim();
+        final key = parsed.first.trim();
+
+        if (pattern.hasMatch(parsed.last)) {
+          output[key] = pattern.firstMatch(parsed.last)!.group(1)!;
+        } else {
+          output[key] = parsed.last.trim();
+        }
       } else {
         params.add(entry);
       }
