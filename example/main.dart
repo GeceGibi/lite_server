@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:lite_server/lite_server.dart';
 
-import 'routes/home.dart';
 import 'services/auth.dart';
 
 void main(List<String> arguments) async {
@@ -24,7 +23,13 @@ void main(List<String> arguments) async {
       CorsOriginService(),
     ],
     routes: [
-      homeRoute,
+      HttpRoute.post(
+        '/user/<id>',
+        handler: (request, payload) async {
+          print(jsonDecode(await request.readBodyAsString()));
+          request.response.json(jsonEncode(payload.pathParameters));
+        },
+      ),
       HttpRoute.post(
         '/post',
         handler: (request, payload) async {
