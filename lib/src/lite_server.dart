@@ -17,8 +17,7 @@ class _HttpRouteMapper {
 }
 
 class LiteServer with LiteLogger {
-  LiteServer.attach(
-    this.server, {
+  LiteServer({
     this.routes = const [],
     this.services = const [],
     this.errorHandler,
@@ -27,21 +26,13 @@ class LiteServer with LiteLogger {
     this.logErrors = false,
     this.cleanLogsOnStart = false,
   }) {
-    if (cleanLogsOnStart) {
-      clearLogs();
-    }
-
-    generateRouteMap();
-
-    server.asBroadcastStream().listen(requestHandler);
-    print('LiteServer running on(${server.address.address}:${server.port})');
+    _init();
   }
 
   final bool logRequests;
   final bool logErrors;
   final bool cleanLogsOnStart;
 
-  final HttpServer server;
   final List<HttpService> services;
   final List<HttpRoute> routes;
 
@@ -58,6 +49,28 @@ class LiteServer with LiteLogger {
   }
 
   final routeMap = <String, _HttpRouteMapper>{};
+
+  void _init() {
+    if (cleanLogsOnStart) {
+      clearLogs();
+    }
+
+    generateRouteMap();
+  }
+
+  final _servers = <HttpServer>[];
+
+  void attach(HttpServer server) {
+    _servers.add(server);
+
+    server.asBroadcastStream().listen(
+          requestHandler,
+          onDone: () => _servers.remove(server),
+          cancelOnError: false,
+        );
+
+    print('LiteServer running on(${server.address.address}:${server.port})');
+  }
 
   (List<String>, List<HttpService>) _genRouteMap(
     List<HttpRoute> routes,

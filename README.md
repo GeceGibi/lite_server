@@ -12,14 +12,8 @@ Lightweight Http server for Dart.
 
 ## Usage
 ```dart
-
-  final server = await HttpServer.bind(
-    InternetAddress.anyIPv4,
-    8080
-  );
-
-  LiteServer.attach(
-    server,
+void main(List<String> arguments) async {
+    final liteServer = LiteServer(
     cleanLogsOnStart: true,
     logRequests: true,
     logErrors: true,
@@ -71,5 +65,24 @@ Lightweight Http server for Dart.
       ),
     ],
   );
+
+  for (var i = 0; i < 6; i++) {
+    await Isolate.spawn(startServer, liteServer);
+  }
+
+  await startServer(liteServer);
+}
+
+Future<void> startServer(LiteServer liteServer) async {
+  final server = await HttpServer.bind(
+    InternetAddress.anyIPv4,
+    9080,
+    shared: true,
+  )
+    ..autoCompress = true
+    ..serverHeader = Isolate.current.hashCode.toString();
+
+  liteServer.attach(server);
+}
 
 ```

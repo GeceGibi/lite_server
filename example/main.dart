@@ -1,20 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'package:lite_server/lite_server.dart';
 
 import 'services/auth.dart';
 
 void main(List<String> arguments) async {
-  final server = await HttpServer.bind(
-    InternetAddress.anyIPv4,
-    9080,
-    shared: true,
-  );
-
-  server.autoCompress = true;
-
-  LiteServer.attach(
-    server,
+  final liteServer = LiteServer(
     cleanLogsOnStart: true,
     logRequests: true,
     logErrors: true,
@@ -66,4 +58,22 @@ void main(List<String> arguments) async {
       ),
     ],
   );
+
+  for (var i = 0; i < 6; i++) {
+    await Isolate.spawn(startServer, liteServer);
+  }
+
+  await startServer(liteServer);
+}
+
+Future<void> startServer(LiteServer liteServer) async {
+  final server = await HttpServer.bind(
+    InternetAddress.anyIPv4,
+    9080,
+    shared: true,
+  )
+    ..autoCompress = true
+    ..serverHeader = Isolate.current.hashCode.toString();
+
+  liteServer.attach(server);
 }
