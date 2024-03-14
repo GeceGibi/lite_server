@@ -48,37 +48,20 @@ class CorsOriginService extends HttpService {
   FutureOr<(HttpRequest?, Map<String, Object?>?)> handleRequest(
     HttpRequest request,
   ) {
+    final corsHeaders = {
+      'Access-Control-Expose-Headers': [''],
+      'Access-Control-Allow-Credentials': ['true'],
+      'Access-Control-Allow-Origin': allowedOrigins,
+      'Access-Control-Max-Age': [Duration(hours: 24).inSeconds.toString()],
+      'Access-Control-Allow-Headers': [allowedHeaders.join(',')],
+      'Access-Control-Allow-Methods': [allowedMethods.join(',')],
+    };
+
+    for (final header in corsHeaders.entries) {
+      request.response.headers.set(header.key, header.value);
+    }
+
     if (request.method == 'OPTIONS') {
-      request.response.headers.set(
-        'Access-Control-Expose-Headers',
-        [''],
-      );
-
-      request.response.headers.set(
-        'Access-Control-Allow-Credentials',
-        ['true'],
-      );
-
-      request.response.headers.set(
-        'Access-Control-Allow-Origin',
-        allowedOrigins,
-      );
-
-      request.response.headers.set(
-        'Access-Control-Max-Age',
-        [Duration(hours: 24).inSeconds.toString()],
-      );
-
-      request.response.headers.set(
-        'Access-Control-Allow-Headers',
-        [allowedHeaders.join(',')],
-      );
-
-      request.response.headers.set(
-        'Access-Control-Allow-Methods',
-        [allowedMethods.join(',')],
-      );
-
       request.response.statusCode = HttpStatus.ok;
       request.response.close();
       return (null, null);
