@@ -25,6 +25,16 @@ void main(List<String> arguments) async {
     routes: [
       homeRoute,
       adminRoute,
+      HttpStaticRoute(
+        '/images',
+        directoryPath: 'assets/images/',
+        listDirectory: true,
+      ),
+      HttpStaticRoute(
+        '/web',
+        directoryPath: 'assets/web/',
+        defaultDocument: 'index.html',
+      ),
     ],
   );
 }

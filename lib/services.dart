@@ -21,28 +21,36 @@ class LoggerService extends HttpService {
 
 /// ! --------------------------------------------------------------------------
 
-const _allowedMethods = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT'];
-const _allowedHeaders = [
-  'access-control-allow-origin',
-  'accept',
-  'accept-encoding',
-  'authorization',
-  'content-type',
-  'dnt',
-  'origin',
-  'user-agent',
-];
-
 class CorsOriginService extends HttpService {
   CorsOriginService({
     this.allowedOrigins = const ['*'],
-    this.allowedHeaders = _allowedHeaders,
-    this.allowedMethods = _allowedMethods,
+    this.allowedHeaders = defaultAllowedHeaders,
+    this.allowedMethods = defaultAllowedMethods,
   });
 
   final List<String> allowedOrigins;
   final List<String> allowedHeaders;
   final List<String> allowedMethods;
+
+  static const defaultAllowedHeaders = [
+    'access-control-allow-origin',
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+  ];
+
+  static const defaultAllowedMethods = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT'
+  ];
 
   @override
   FutureOr<(HttpRequest?, Map<String, Object?>?)> handleRequest(

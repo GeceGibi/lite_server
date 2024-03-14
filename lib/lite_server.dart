@@ -3,6 +3,8 @@ library lite_server;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:mime/mime.dart';
+
 part 'router.dart';
 part 'services.dart';
 part 'utils.dart';
@@ -45,7 +47,10 @@ class LiteServer with LiteLogger {
 
   final void Function(HttpRequest request) onRouteNotFound;
   final void Function(
-      HttpRequest request, Object? error, StackTrace stackTrace)? errorHandler;
+    HttpRequest request,
+    Object? error,
+    StackTrace stackTrace,
+  )? errorHandler;
 
   static void _defaultRouteNotFound(HttpRequest request) {
     request.response.statusCode = HttpStatus.notFound;
@@ -100,7 +105,15 @@ class LiteServer with LiteLogger {
     List<HttpRoute>? searchRoutes,
   ) {
     for (final entry in routeMap.entries) {
-      if (HttpUtils.pathPattern.hasMatch(entry.key)) {
+      ///! Static file path
+      if (entry.value.route is HttpStaticRoute) {
+        if (requestPath.startsWith(entry.key)) {
+          return (entry.value, {});
+        }
+      }
+
+      ///! Dynamic paths
+      else if (HttpUtils.pathPattern.hasMatch(entry.key)) {
         final (isMatched, params) = HttpUtils.routeHasMatch(
           requestPath,
           entry.key,
@@ -109,7 +122,10 @@ class LiteServer with LiteLogger {
         if (isMatched) {
           return (entry.value, params);
         }
-      } else if (entry.key == requestPath) {
+      }
+
+      ///! Not dynamic paths
+      else if (entry.key == requestPath) {
         return (entry.value, {});
       }
     }

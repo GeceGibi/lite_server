@@ -1,0 +1,111 @@
+2024-03-14T13:05:41.888133
+## URI ##
+/web
+
+## HEADERS ##
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+connection: keep-alive
+cache-control: max-age=0
+accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+accept-encoding: gzip, deflate
+dnt: 1
+host: 0.0.0.0:9080
+upgrade-insecure-requests: 1
+
+## CONNECTION INFO ##
+IP: 127.0.0.1
+PORT: 64306
+
+------------------------------------------------------------------------------------------------------------------------2024-03-14T13:05:42.238803
+## URI ##
+/web
+
+## HEADERS ##
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+connection: keep-alive
+cache-control: max-age=0
+accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+accept-encoding: gzip, deflate
+dnt: 1
+host: 0.0.0.0:9080
+upgrade-insecure-requests: 1
+
+## CONNECTION INFO ##
+IP: 127.0.0.1
+PORT: 64306
+
+------------------------------------------------------------------------------------------------------------------------2024-03-14T13:05:44.424237
+## URI ##
+/web/
+
+## HEADERS ##
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+connection: keep-alive
+accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+accept-encoding: gzip, deflate
+dnt: 1
+host: 0.0.0.0:9080
+upgrade-insecure-requests: 1
+
+## CONNECTION INFO ##
+IP: 127.0.0.1
+PORT: 64306
+
+------------------------------------------------------------------------------------------------------------------------2024-03-14T13:05:46.410127
+## URI ##
+/web/images/512.png
+
+## HEADERS ##
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+connection: keep-alive
+accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+accept-encoding: gzip, deflate
+dnt: 1
+host: 0.0.0.0:9080
+upgrade-insecure-requests: 1
+
+## CONNECTION INFO ##
+IP: 127.0.0.1
+PORT: 64306
+
+------------------------------------------------------------------------------------------------------------------------2024-03-14T13:06:41.031032
+## URI ##
+/web/
+
+## HEADERS ##
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+connection: keep-alive
+accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+accept-encoding: gzip, deflate
+dnt: 1
+host: 0.0.0.0:9080
+upgrade-insecure-requests: 1
+
+## CONNECTION INFO ##
+IP: 127.0.0.1
+PORT: 64306
+
+------------------------------------------------------------------------------------------------------------------------2024-03-14T13:06:43.999108
+## URI ##
+/web/i
+
+## HEADERS ##
+user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36
+connection: keep-alive
+accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
+accept-language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+accept-encoding: gzip, deflate
+dnt: 1
+host: 0.0.0.0:9080
+upgrade-insecure-requests: 1
+
+## CONNECTION INFO ##
+IP: 127.0.0.1
+PORT: 64306
+
+------------------------------------------------------------------------------------------------------------------------

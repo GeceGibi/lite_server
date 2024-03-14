@@ -1,7 +1,7 @@
 part of 'lite_server.dart';
 
 interface class HttpUtils {
-  static const pathPatternGroup = r'(\w+)';
+  static const pathPatternGroup = r'([a-zA-Z0-9_.]+)';
   static final pathPattern = RegExp('<$pathPatternGroup>');
 
   static String pathCorrection(String segment) {

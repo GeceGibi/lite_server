@@ -55,3 +55,69 @@ class HttpRoute {
   final List<HttpRoute>? routes;
   final List<HttpService>? services;
 }
+
+class HttpStaticRoute extends HttpRoute {
+  HttpStaticRoute(
+    super.path, {
+    required String directoryPath,
+    String? defaultDocument,
+    bool listDirectory = false,
+  }) : super(
+          methods: {'GET'},
+          handler: (request, payload) {
+            final dir = Directory('$cwd/$directoryPath');
+
+            var fileName = request.uri.path.substring(path.length);
+
+            if (fileName.startsWith('/')) {
+              fileName = fileName.substring(1);
+            }
+
+            if (fileName.isEmpty && defaultDocument != null) {
+              fileName = defaultDocument;
+            }
+
+            if (fileName.isEmpty && listDirectory) {
+              final content = [
+                for (var element in dir.listSync())
+                  '$path/${element.path.split('/').last}',
+              ];
+
+              request.response.headers.contentType = ContentType.html;
+              request.response.write(_getListDirectoryHtml(content));
+              request.response.close();
+              return;
+            }
+
+            final file = File('${dir.path}/$fileName');
+
+            if (!file.existsSync()) {
+              request.response.statusCode = HttpStatus.notFound;
+              request.response.close();
+              return;
+            }
+
+            final bytes = file.readAsBytesSync();
+            final mimeType = lookupMimeType('${dir.path}/$fileName');
+
+            if (mimeType == null) {
+              request.response.statusCode = HttpStatus.internalServerError;
+              request.response.reasonPhrase = 'Mime-Type not found';
+              request.response.close();
+              return;
+            }
+
+            request.response.headers.contentLength = bytes.length;
+            request.response.headers.contentType = ContentType.parse(mimeType);
+
+            request.response.add(file.readAsBytesSync());
+            request.response.close();
+          },
+        );
+
+  static final cwd = Directory.current.path;
+  static String _getListDirectoryHtml(List<String> items) {
+    final li = [for (final item in items) '<li><a href="$item">$item</a></li>'];
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body><ul>${li.join('')}</ul></body></html>';
+  }
+}
