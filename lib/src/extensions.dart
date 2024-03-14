@@ -1,16 +1,6 @@
 part of 'lite_server.dart';
 
 extension HttpResponseHelpers on HttpResponse {
-  Future<void> badRequest([String? message]) async {
-    statusCode = HttpStatus.badRequest;
-
-    if (message != null) {
-      reasonPhrase = message;
-    }
-
-    await close();
-  }
-
   Future<void> ok(Object? body) async {
     write(body);
     await close();
@@ -19,6 +9,33 @@ extension HttpResponseHelpers on HttpResponse {
   Future<void> json(String encodedData) async {
     headers.contentType = ContentType.json;
     write(encodedData);
+    await close();
+  }
+
+  Future<void> text(String data) async {
+    headers.contentType = ContentType.text;
+    write(data);
+    await close();
+  }
+
+  Future<void> html(String data) async {
+    headers.contentType = ContentType.html;
+    write(data);
+    await close();
+  }
+
+  Future<void> unauthorized() async {
+    statusCode = HttpStatus.unauthorized;
+    await close();
+  }
+
+  Future<void> badRequest([String? message]) async {
+    statusCode = HttpStatus.badRequest;
+
+    if (message != null) {
+      reasonPhrase = message;
+    }
+
     await close();
   }
 }
@@ -34,13 +51,7 @@ extension HttpRequestHelpers on HttpRequest {
       return false;
     }
 
-    final boundary = headers.contentType!.parameters['boundary'];
-
-    if (boundary == null) {
-      return false;
-    }
-
-    return true;
+    return headers.contentType!.parameters['boundary'] != null;
   }
 
   Stream<HttpMultiPartData> multipartData() async* {
@@ -54,9 +65,8 @@ extension HttpRequestHelpers on HttpRequest {
       throw Exception('Boundary not found');
     }
 
-    final parts = await transform<MimeMultipart>(
-            MimeMultipartTransformer(boundary).cast())
-        .toList();
+    final transformer = MimeMultipartTransformer(boundary);
+    final parts = await transform<MimeMultipart>(transformer.cast()).toList();
 
     for (final part in parts) {
       final contentDisposition = part.headers['content-disposition'];

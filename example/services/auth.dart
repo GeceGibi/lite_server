@@ -12,11 +12,6 @@ class AuthService extends HttpService {
 class IpCheckService extends HttpService {
   @override
   handleRequest(HttpRequest request) {
-    // throw HttpException(
-    //   message: 'Fuck off',
-    //   statusCode: HttpStatus.unauthorized,
-    // );
-
     request.response.statusCode = HttpStatus.unauthorized;
     request.response.write('NOT ALLOWED');
     request.response.close();

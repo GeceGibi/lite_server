@@ -8,7 +8,7 @@ abstract class HttpService {
 }
 
 /// ! --------------------------------------------------------------------------
-class LoggerService extends HttpService {
+class LoggerService extends HttpService with LiteLogger {
   @override
   FutureOr<(HttpRequest?, Map<String, Object?>?)> handleRequest(
     HttpRequest request,
