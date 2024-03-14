@@ -1,6 +1,7 @@
 library lite_server;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:mime/mime.dart';
@@ -9,6 +10,7 @@ part 'router.dart';
 part 'services.dart';
 part 'utils.dart';
 part 'logger.dart';
+part 'extensions.dart';
 
 class _HttpRouteMapper {
   const _HttpRouteMapper(this.route, this.services);

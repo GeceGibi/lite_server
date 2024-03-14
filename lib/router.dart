@@ -65,7 +65,7 @@ class HttpStaticRoute extends HttpRoute {
   }) : super(
           methods: {'GET'},
           handler: (request, payload) {
-            final dir = Directory('$cwd/$directoryPath');
+            final dir = Directory(directoryPath);
 
             var fileName = request.uri.path.substring(path.length);
 
@@ -73,20 +73,23 @@ class HttpStaticRoute extends HttpRoute {
               fileName = fileName.substring(1);
             }
 
-            if (fileName.isEmpty && defaultDocument != null) {
-              fileName = defaultDocument;
-            }
+            if (fileName.isEmpty) {
+              if (defaultDocument != null) {
+                fileName = defaultDocument;
+              }
 
-            if (fileName.isEmpty && listDirectory) {
-              final content = [
-                for (var element in dir.listSync())
-                  '$path/${element.path.split('/').last}',
-              ];
+              /// ls
+              else if (listDirectory) {
+                final content = [
+                  for (var element in dir.listSync())
+                    '$path/${element.path.split('/').last}',
+                ];
 
-              request.response.headers.contentType = ContentType.html;
-              request.response.write(_getListDirectoryHtml(content));
-              request.response.close();
-              return;
+                request.response.headers.contentType = ContentType.html;
+                request.response.write(_getListDirectoryHtml(content));
+                request.response.close();
+                return;
+              }
             }
 
             final file = File('${dir.path}/$fileName');
@@ -115,7 +118,6 @@ class HttpStaticRoute extends HttpRoute {
           },
         );
 
-  static final cwd = Directory.current.path;
   static String _getListDirectoryHtml(List<String> items) {
     final li = [for (final item in items) '<li><a href="$item">$item</a></li>'];
     return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body><ul>${li.join('')}</ul></body></html>';
