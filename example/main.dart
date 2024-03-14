@@ -20,6 +20,7 @@ void main(List<String> arguments) async {
     logErrors: true,
     services: [
       LogService(),
+      CorsOriginService(),
     ],
     routes: [
       homeRoute,

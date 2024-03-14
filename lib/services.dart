@@ -49,8 +49,12 @@ class CorsOriginService extends HttpService {
     HttpRequest request,
   ) {
     if (request.method == 'OPTIONS') {
-      request.response.headers.set('Access-Control-Expose-Headers', '');
-      request.response.headers.set('Access-Control-Allow-Credentials', 'true');
+      request.response.headers.set('Access-Control-Expose-Headers', ['']);
+
+      request.response.headers.set(
+        'Access-Control-Allow-Credentials',
+        ['true'],
+      );
 
       request.response.headers.set(
         'Access-Control-Allow-Origin',
@@ -59,17 +63,17 @@ class CorsOriginService extends HttpService {
 
       request.response.headers.set(
         'Access-Control-Max-Age',
-        Duration(hours: 24).inSeconds.toString(),
+        [Duration(hours: 24).inSeconds.toString()],
       );
 
       request.response.headers.set(
         'Access-Control-Allow-Headers',
-        allowedHeaders.join(','),
+        [allowedHeaders.join(',')],
       );
 
       request.response.headers.set(
         'Access-Control-Allow-Methods',
-        allowedMethods.join(','),
+        [allowedMethods.join(',')],
       );
 
       request.response.close();
