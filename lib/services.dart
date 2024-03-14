@@ -49,7 +49,10 @@ class CorsOriginService extends HttpService {
     HttpRequest request,
   ) {
     if (request.method == 'OPTIONS') {
-      request.response.headers.set('Access-Control-Expose-Headers', ['']);
+      request.response.headers.set(
+        'Access-Control-Expose-Headers',
+        [''],
+      );
 
       request.response.headers.set(
         'Access-Control-Allow-Credentials',
@@ -76,6 +79,7 @@ class CorsOriginService extends HttpService {
         [allowedMethods.join(',')],
       );
 
+      request.response.statusCode = HttpStatus.ok;
       request.response.close();
       return (null, null);
     }
