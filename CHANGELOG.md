@@ -1,3 +1,6 @@
+## 0.0.4
+- Update Logger `printLogs` logic
+
 ## 0.0.3
 - Moved logging params to LoggerService
 - Added `onError` handler to services
