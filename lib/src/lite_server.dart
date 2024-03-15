@@ -63,12 +63,7 @@ class LiteServer with LiteLogger {
   void attach(HttpServer server) {
     _servers.add(server);
 
-    server.asBroadcastStream().listen(
-          requestHandler,
-          onDone: () => _servers.remove(server),
-          cancelOnError: false,
-        );
-
+    server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
     print('LiteServer running on(${server.address.address}:${server.port})');
   }
 
@@ -100,7 +95,8 @@ class LiteServer with LiteLogger {
         continue;
       }
 
-      routeMap[paths.join('/')] = _HttpRouteMapper(route, services);
+      final normalizedPath = HttpUtils.normalizePath(paths);
+      routeMap[normalizedPath] = _HttpRouteMapper(route, services);
     }
 
     return (parentPaths, parentServices);

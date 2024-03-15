@@ -10,6 +10,7 @@ class HttpRoutePayload {
   final Map<String, Object?> extras;
 }
 
+///! ---------------------------------------------------------------------------
 class HttpRoute {
   const HttpRoute(
     this.path, {
@@ -50,20 +51,22 @@ class HttpRoute {
 
   final String path;
   final Set<String> methods;
-  final void Function(HttpRequest, HttpRoutePayload)? handler;
+  final void Function(HttpRequest request, HttpRoutePayload payload)? handler;
 
   final List<HttpRoute>? routes;
   final List<HttpService>? services;
 }
 
+///! ---------------------------------------------------------------------------
+
 class HttpStaticRoute extends HttpRoute {
   HttpStaticRoute(
     super.path, {
+    super.methods = const {'GET'},
     required String directoryPath,
     String? defaultDocument,
     bool listDirectory = false,
   }) : super(
-          methods: {'GET'},
           handler: (request, payload) {
             final dir = Directory(directoryPath);
 

@@ -22,6 +22,25 @@ void main(List<String> arguments) async {
       CorsOriginService(),
     ],
     routes: [
+      HttpRoute.get(
+        '/',
+        handler: (request, payload) async {
+          await request.response.redirect(Uri(path: '/api/users'));
+        },
+        routes: [
+          HttpRoute.get(
+            'api',
+            routes: [
+              HttpRoute.get(
+                'users',
+                handler: (request, payload) async {
+                  await request.response.json('[]');
+                },
+              ),
+            ],
+          )
+        ],
+      ),
       HttpRoute.post(
         '/user/<id>',
         handler: (request, payload) async {

@@ -11,17 +11,22 @@ interface class HttpUtils {
     };
   }
 
+  static String normalizePath(List<String> paths) {
+    return paths.join('/').replaceAll('//', '/');
+  }
+
   static (bool isMatched, Map<String, String> params) routeHasMatch(
     String requestPath,
     String mappedRoutePath,
   ) {
-    final dynamicPath = RegExp(RegExp.escape(mappedRoutePath).replaceAllMapped(
+    final escapedRoutePath = RegExp.escape(mappedRoutePath);
+    final dynamicPath = RegExp(escapedRoutePath.replaceAllMapped(
       pathPattern,
       (match) => pathPatternGroup,
     ));
 
     if (dynamicPath.hasMatch(requestPath)) {
-      final key = pathPattern.firstMatch(mappedRoutePath)!.group(1)!;
+      final key = pathPattern.firstMatch(escapedRoutePath)!.group(1)!;
       final value = dynamicPath.firstMatch(requestPath)!.group(1)!;
 
       return (true, {key: value});
