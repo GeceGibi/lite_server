@@ -47,13 +47,13 @@ class LoggerService extends HttpService with LiteLogger {
 
   @override
   FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request) {
-    if (!logRequests) {
-      return HttpServiceBehavior.moveOn();
-    }
-
     if (printLogs) {
       final now = DateTime.now();
       print('$now: ${request.method} | ${request.uri}');
+    }
+
+    if (!logRequests) {
+      return HttpServiceBehavior.moveOn();
     }
 
     log(
