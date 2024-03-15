@@ -9,60 +9,47 @@ part 'services.dart';
 part 'utils.dart';
 part 'logger.dart';
 part 'extensions.dart';
+part 'models.dart';
 
-class _HttpRouteMapper {
-  const _HttpRouteMapper(this.route, this.services);
-  final HttpRoute route;
-  final List<HttpService> services;
-}
-
-class LiteServer with LiteLogger {
+class LiteServer {
   LiteServer({
     this.routes = const [],
     this.services = const [],
-    this.errorHandler,
+    this.onError = _defaultErrorHandler,
     this.onRouteNotFound = _defaultRouteNotFound,
-    this.logRequests = false,
-    this.logErrors = false,
-    this.cleanLogsOnStart = false,
   }) {
-    _init();
+    generateRouteMap();
   }
-
-  final bool logRequests;
-  final bool logErrors;
-  final bool cleanLogsOnStart;
 
   final List<HttpService> services;
   final List<HttpRoute> routes;
 
+  /// local vars
+  final _servers = <HttpServer>[];
+  final _routeMap = <String, _HttpRouteMapper>{};
+  final _onErrorStreamController =
+      StreamController<HttpRequestError>.broadcast();
+
   final void Function(HttpRequest request) onRouteNotFound;
-  final void Function(
-    HttpRequest request,
-    Object? error,
-    StackTrace stackTrace,
-  )? errorHandler;
+  final void Function(HttpRequest request, Object? error, StackTrace stackTrace)
+      onError;
 
   static void _defaultRouteNotFound(HttpRequest request) {
     request.response.statusCode = HttpStatus.notFound;
     request.response.close();
   }
 
-  final routeMap = <String, _HttpRouteMapper>{};
-
-  void _init() {
-    if (cleanLogsOnStart) {
-      clearLogs();
-    }
-
-    generateRouteMap();
+  static void _defaultErrorHandler(
+    HttpRequest request,
+    Object? error,
+    StackTrace stackTrace,
+  ) {
+    request.response.statusCode = HttpStatus.internalServerError;
+    request.response.close();
   }
-
-  final _servers = <HttpServer>[];
 
   void attach(HttpServer server) {
     _servers.add(server);
-
     server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
     print('LiteServer running on(${server.address.address}:${server.port})');
   }
@@ -96,14 +83,14 @@ class LiteServer with LiteLogger {
       }
 
       final normalizedPath = HttpUtils.normalizePath(paths);
-      routeMap[normalizedPath] = _HttpRouteMapper(route, services);
+      _routeMap[normalizedPath] = _HttpRouteMapper(route, services);
     }
 
     return (parentPaths, parentServices);
   }
 
   void generateRouteMap() {
-    routeMap.clear();
+    _routeMap.clear();
     _genRouteMap(routes, [], []);
   }
 
@@ -112,7 +99,7 @@ class LiteServer with LiteLogger {
     String method,
     List<HttpRoute>? searchRoutes,
   ) {
-    for (final entry in routeMap.entries) {
+    for (final entry in _routeMap.entries) {
       ///! Static file path
       if (entry.value.route is HttpStaticRoute) {
         if (requestPath.startsWith(entry.key)) {
@@ -150,85 +137,49 @@ class LiteServer with LiteLogger {
   }
 
   void requestHandler(HttpRequest request) async {
-    if (logRequests) {
-      log(
-        [
-          '## URI ##',
-          '${request.uri}\n',
-          '## HEADERS ##',
-          '${request.headers}',
-          '## CONNECTION INFO ##',
-          'IP: ${request.connectionInfo?.remoteAddress.address}',
-          'PORT: ${request.connectionInfo?.remotePort}\n',
-        ].join('\n'),
-        prefix: 'request_',
-      );
-    }
-
     try {
-      final (routeMapper, pathParameters) = findRoute(request);
-
       final extras = <String, Object?>{};
 
       /// Check Global services
       for (final service in services) {
-        final (passedRequest, extra) = await service.handleRequest(request);
+        service._onErrorStream = _onErrorStreamController.stream;
+        final behavior = await service.handleRequest(request);
 
-        if (passedRequest == null) {
+        if (!behavior.moveOn) {
           return;
         }
 
-        if (extra != null) {
-          extras.addAll(extra);
-        }
+        extras.addAll(behavior.extra);
       }
+
+      /// Find route if request not cut off from services
+      final (routeMapper, pathParameters) = findRoute(request);
 
       if (routeMapper == null) {
         onRouteNotFound(request);
-      } else {
-        for (final service in routeMapper.services) {
-          final (passedRequest, extra) = await service.handleRequest(request);
+        return;
+      }
 
-          if (passedRequest == null) {
-            return;
-          }
+      for (final service in routeMapper.services) {
+        service._onErrorStream = _onErrorStreamController.stream;
+        final behavior = await service.handleRequest(request);
 
-          if (extra != null) {
-            extras.addAll(extra);
-          }
+        if (!behavior.moveOn) {
+          return;
         }
 
-        routeMapper.route.handler?.call(
-          request,
-          HttpRoutePayload(
-            extras: extras,
-            pathParameters: pathParameters,
-          ),
-        );
+        extras.addAll(behavior.extra);
       }
+
+      final payload = HttpRoutePayload(
+        extras: extras,
+        pathParameters: pathParameters,
+      );
+
+      await routeMapper.route.handler!(request, payload);
     } catch (error, stack) {
-      errorHandler?.call(request, error, stack);
-
-      if (logErrors) {
-        log(
-          [
-            '## URI ##',
-            '${request.uri}\n',
-
-            '## HEADERS ##',
-            '${request.headers}',
-
-            '## CONNECTION INFO ##',
-            'IP: ${request.connectionInfo?.remoteAddress.address}',
-            'PORT: ${request.connectionInfo?.remotePort}\n',
-
-            ///
-            error,
-            stack,
-          ].join('\n'),
-          prefix: 'error_',
-        );
-      }
+      onError(request, error, stack);
+      _onErrorStreamController.add(HttpRequestError(request, error, stack));
     }
   }
 }

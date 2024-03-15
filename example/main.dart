@@ -2,23 +2,20 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:lite_server/lite_server.dart';
-
-import 'services/auth.dart';
+import 'package:lite_server/src/lite_server.dart';
 
 void main(List<String> arguments) async {
   final liteServer = LiteServer(
-    cleanLogsOnStart: true,
-    logRequests: true,
-    logErrors: true,
     services: [
-      LogService(),
+      LoggerService(),
       CorsOriginService(),
     ],
     routes: [
       HttpRoute.get(
         '/',
-        handler: (request, payload) async {
-          await request.response.redirect(Uri(path: '/api/users'));
+        handler: (request, payload) {
+          throw Exception('Error test');
+          // await request.response.redirect(Uri(path: '/api/users'));
         },
         routes: [
           HttpRoute.get(

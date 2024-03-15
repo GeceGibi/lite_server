@@ -13,18 +13,15 @@ Lightweight Http server for Dart.
 ## Usage
 ```dart
 void main(List<String> arguments) async {
-    final liteServer = LiteServer(
-    cleanLogsOnStart: true,
-    logRequests: true,
-    logErrors: true,
+  final liteServer = LiteServer(
     services: [
-      LogService(),
+      LoggerService(),
       CorsOriginService(),
     ],
     routes: [
       HttpRoute.get(
         '/',
-        handler: (request, payload) async {
+        handler: (request, payload) {
           await request.response.redirect(Uri(path: '/api/users'));
         },
         routes: [

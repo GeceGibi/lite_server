@@ -3,19 +3,99 @@
 part of 'lite_server.dart';
 
 abstract class HttpService {
-  FutureOr<(HttpRequest? request, Map<String, Object?>? extra)> handleRequest(
-      HttpRequest request);
+  set _onErrorStream(Stream<HttpRequestError> stream) {
+    stream.listen((event) {
+      onError(event.request, event.error, event.stackTrace);
+    });
+  }
+
+  FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request);
+  void onError(HttpRequest request, Object? error, StackTrace stackTrace) {}
+}
+
+/// ! --------------------------------------------------------------------------
+class HttpServiceBehavior {
+  HttpServiceBehavior.cutOff()
+      : moveOn = false,
+        extra = const {};
+
+  HttpServiceBehavior.moveOn({
+    this.extra = const {},
+  }) : moveOn = true;
+
+  final bool moveOn;
+  final Map<String, Object?> extra;
 }
 
 /// ! --------------------------------------------------------------------------
 class LoggerService extends HttpService with LiteLogger {
+  LoggerService({
+    this.cleanLogsOnStart = true,
+    this.logErrors = true,
+    this.logRequests = true,
+    this.printLogs = true,
+  }) {
+    if (cleanLogsOnStart) {
+      clearLogs();
+    }
+  }
+
+  final bool printLogs;
+  final bool logRequests;
+  final bool logErrors;
+  final bool cleanLogsOnStart;
+
   @override
-  FutureOr<(HttpRequest?, Map<String, Object?>?)> handleRequest(
-    HttpRequest request,
-  ) {
-    final now = DateTime.now();
-    print('$now: ${request.method} | ${request.uri}');
-    return (request, null);
+  FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request) {
+    if (!logRequests) {
+      return HttpServiceBehavior.moveOn();
+    }
+
+    if (printLogs) {
+      final now = DateTime.now();
+      print('$now: ${request.method} | ${request.uri}');
+    }
+
+    log(
+      [
+        '## URI ##',
+        '${request.uri}\n',
+        '## HEADERS ##',
+        '${request.headers}',
+        '## CONNECTION INFO ##',
+        'IP: ${request.connectionInfo?.remoteAddress.address}',
+        'PORT: ${request.connectionInfo?.remotePort}\n',
+      ].join('\n'),
+      prefix: 'request_',
+    );
+
+    return HttpServiceBehavior.moveOn();
+  }
+
+  @override
+  void onError(HttpRequest request, Object? error, StackTrace stackTrace) {
+    if (!logErrors) {
+      return;
+    }
+
+    log(
+      [
+        '## URI ##',
+        '${request.uri}\n',
+
+        '## HEADERS ##',
+        '${request.headers}',
+
+        '## CONNECTION INFO ##',
+        'IP: ${request.connectionInfo?.remoteAddress.address}',
+        'PORT: ${request.connectionInfo?.remotePort}\n',
+
+        ///
+        error,
+        stackTrace,
+      ].join('\n'),
+      prefix: 'error_',
+    );
   }
 }
 
@@ -53,9 +133,7 @@ class CorsOriginService extends HttpService {
   ];
 
   @override
-  FutureOr<(HttpRequest?, Map<String, Object?>?)> handleRequest(
-    HttpRequest request,
-  ) {
+  FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request) {
     final corsHeaders = {
       'Access-Control-Expose-Headers': [''],
       'Access-Control-Allow-Credentials': ['true'],
@@ -72,9 +150,9 @@ class CorsOriginService extends HttpService {
     if (request.method == 'OPTIONS') {
       request.response.statusCode = HttpStatus.ok;
       request.response.close();
-      return (null, null);
+      return HttpServiceBehavior.cutOff();
     }
 
-    return (request, null);
+    return HttpServiceBehavior.moveOn();
   }
 }

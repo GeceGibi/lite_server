@@ -1,15 +1,5 @@
 part of 'lite_server.dart';
 
-class HttpRoutePayload {
-  HttpRoutePayload({
-    this.pathParameters = const {},
-    this.extras = const {},
-  });
-
-  final Map<String, String> pathParameters;
-  final Map<String, Object?> extras;
-}
-
 ///! ---------------------------------------------------------------------------
 class HttpRoute {
   const HttpRoute(
@@ -51,7 +41,8 @@ class HttpRoute {
 
   final String path;
   final Set<String> methods;
-  final void Function(HttpRequest request, HttpRoutePayload payload)? handler;
+  final FutureOr<void> Function(HttpRequest request, HttpRoutePayload payload)?
+      handler;
 
   final List<HttpRoute>? routes;
   final List<HttpService>? services;
