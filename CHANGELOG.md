@@ -1,3 +1,8 @@
+## 0.0.5
+- Renamed `HttpServiceBehavior.modeOn` => `HttpServiceBehavior.next`
+- Renamed `HttpServiceBehavior.cutOff` => `HttpServiceBehavior.revoke`
+- Updated helpers extensions
+
 ## 0.0.4
 - Update Logger `printLogs` logic
 
