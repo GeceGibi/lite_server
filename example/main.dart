@@ -15,7 +15,7 @@ void main(List<String> arguments) async {
         '/',
         handler: (request, payload) {
           throw Exception('Error test');
-          // await request.response.redirect(Uri(path: '/api/users'));
+          // request.response.redirect(Uri(path: '/api/users'));
         },
         routes: [
           HttpRoute.get(
@@ -24,7 +24,7 @@ void main(List<String> arguments) async {
               HttpRoute.get(
                 'users',
                 handler: (request, payload) async {
-                  await request.response.json('[]');
+                  request.response.json([]).close();
                 },
               ),
             ],
@@ -43,8 +43,7 @@ void main(List<String> arguments) async {
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
 
-          request.response.write('posted');
-          request.response.close();
+          request.response.text('posted').close();
         },
       ),
       HttpRoute.post(
@@ -58,8 +57,7 @@ void main(List<String> arguments) async {
             }
           }
 
-          request.response.write('uploaded');
-          request.response.close();
+          request.response.text('uploaded').close();
         },
       ),
       HttpStaticRoute(

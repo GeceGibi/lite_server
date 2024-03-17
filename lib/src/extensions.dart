@@ -1,42 +1,49 @@
 part of 'lite_server.dart';
 
 extension HttpResponseHelpers on HttpResponse {
-  Future<void> ok(Object? body) async {
+  HttpResponse ok(Object? body, {ContentType? contentType}) {
+    headers.contentType = contentType ?? ContentType.text;
     write(body);
-    await close();
+    return this;
   }
 
-  Future<void> json(String encodedData) async {
+  HttpResponse status(int code) {
+    statusCode = code;
+    return this;
+  }
+
+  HttpResponse json<T>(T data) {
     headers.contentType = ContentType.json;
-    write(encodedData);
-    await close();
+    write(jsonEncode(data));
+    return this;
   }
 
-  Future<void> text(String data) async {
-    headers.contentType = ContentType.text;
+  /// Default content type = ContentType.text
+  HttpResponse text(String data, {ContentType? contentType}) {
+    headers.contentType = contentType ?? ContentType.text;
     write(data);
-    await close();
+    return this;
   }
 
-  Future<void> html(String data) async {
+  HttpResponse html(String data) {
     headers.contentType = ContentType.html;
     write(data);
-    await close();
+    return this;
   }
 
-  Future<void> unauthorized() async {
+  HttpResponse unauthorized() {
     statusCode = HttpStatus.unauthorized;
-    await close();
+    return this;
   }
 
-  Future<void> badRequest([String? message]) async {
+  HttpResponse badRequest([String? message]) {
     statusCode = HttpStatus.badRequest;
 
     if (message != null) {
       reasonPhrase = message;
     }
 
-    await close();
+    return this;
   }
 }
 

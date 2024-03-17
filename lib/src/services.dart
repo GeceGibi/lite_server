@@ -5,21 +5,25 @@ part of 'lite_server.dart';
 abstract class HttpService {
   set _onErrorStream(Stream<HttpRequestError> stream) {
     stream.listen((event) {
-      onError(event.request, event.error, event.stackTrace);
+      onRequestError(event.request, event.error, event.stackTrace);
     });
   }
 
   FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request);
-  void onError(HttpRequest request, Object? error, StackTrace stackTrace) {}
+  void onRequestError(
+    HttpRequest request,
+    Object? error,
+    StackTrace stackTrace,
+  ) {}
 }
 
 /// ! --------------------------------------------------------------------------
 class HttpServiceBehavior {
-  HttpServiceBehavior.cutOff()
+  HttpServiceBehavior.revoke()
       : moveOn = false,
         extra = const {};
 
-  HttpServiceBehavior.moveOn({
+  HttpServiceBehavior.next({
     this.extra = const {},
   }) : moveOn = true;
 
@@ -53,7 +57,7 @@ class LoggerService extends HttpService with LiteLogger {
     }
 
     if (!logRequests) {
-      return HttpServiceBehavior.moveOn();
+      return HttpServiceBehavior.next();
     }
 
     log(
@@ -69,11 +73,15 @@ class LoggerService extends HttpService with LiteLogger {
       prefix: 'request_',
     );
 
-    return HttpServiceBehavior.moveOn();
+    return HttpServiceBehavior.next();
   }
 
   @override
-  void onError(HttpRequest request, Object? error, StackTrace stackTrace) {
+  void onRequestError(
+    HttpRequest request,
+    Object? error,
+    StackTrace stackTrace,
+  ) {
     if (!logErrors) {
       return;
     }
@@ -150,9 +158,9 @@ class CorsOriginService extends HttpService {
     if (request.method == 'OPTIONS') {
       request.response.statusCode = HttpStatus.ok;
       request.response.close();
-      return HttpServiceBehavior.cutOff();
+      return HttpServiceBehavior.revoke();
     }
 
-    return HttpServiceBehavior.moveOn();
+    return HttpServiceBehavior.next();
   }
 }
