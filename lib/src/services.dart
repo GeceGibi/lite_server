@@ -5,12 +5,12 @@ part of 'lite_server.dart';
 abstract class HttpService {
   set _onErrorStream(Stream<HttpRequestError> stream) {
     stream.listen((event) {
-      onRequestError(event.request, event.error, event.stackTrace);
+      onError(event.request, event.error, event.stackTrace);
     });
   }
 
-  FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request);
-  void onRequestError(
+  FutureOr<HttpServiceBehavior> onRequest(HttpRequest request);
+  void onError(
     HttpRequest request,
     Object? error,
     StackTrace stackTrace,
@@ -36,6 +36,7 @@ class LoggerService extends HttpService with LiteLogger {
   LoggerService({
     this.cleanLogsOnStart = true,
     this.logErrors = true,
+    // not recommend to use for now. Had a performance issues.
     this.logRequests = true,
     this.printLogs = true,
   }) {
@@ -50,34 +51,46 @@ class LoggerService extends HttpService with LiteLogger {
   final bool cleanLogsOnStart;
 
   @override
-  FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request) {
-    if (printLogs) {
-      final now = DateTime.now();
-      print('$now: ${request.method} | ${request.uri}');
-    }
-
-    if (!logRequests) {
+  FutureOr<HttpServiceBehavior> onRequest(HttpRequest request) {
+    if (!printLogs && !logRequests) {
       return HttpServiceBehavior.next();
     }
 
-    log(
-      [
-        '## URI ##',
-        '${request.uri}\n',
-        '## HEADERS ##',
-        '${request.headers}',
-        '## CONNECTION INFO ##',
-        'IP: ${request.connectionInfo?.remoteAddress.address}',
-        'PORT: ${request.connectionInfo?.remotePort}\n',
-      ].join('\n'),
-      prefix: 'request_',
-    );
+    final now = DateTime.now();
+    final clock = Stopwatch()..start();
+
+    request.response.done.then((value) {
+      clock.stop();
+
+      final line = [
+        now.toIso8601String(),
+        clock.elapsed.toString(),
+        request.method,
+        [
+          request.connectionInfo!.remoteAddress.address,
+          request.connectionInfo!.remotePort
+        ].join(':'),
+        request.response.statusCode,
+        request.response.headers.contentType,
+        request.uri,
+      ];
+
+      if (printLogs) {
+        print(line.join(' | '));
+      }
+
+      if (!logRequests) {
+        return HttpServiceBehavior.next();
+      }
+
+      log('${line.join(' | ')}\n', name: 'request_');
+    });
 
     return HttpServiceBehavior.next();
   }
 
   @override
-  void onRequestError(
+  void onError(
     HttpRequest request,
     Object? error,
     StackTrace stackTrace,
@@ -141,7 +154,7 @@ class CorsOriginService extends HttpService {
   ];
 
   @override
-  FutureOr<HttpServiceBehavior> handleRequest(HttpRequest request) {
+  FutureOr<HttpServiceBehavior> onRequest(HttpRequest request) {
     final corsHeaders = {
       'Access-Control-Expose-Headers': [''],
       'Access-Control-Allow-Credentials': ['true'],

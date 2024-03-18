@@ -4,6 +4,8 @@ import 'dart:isolate';
 import 'package:lite_server/lite_server.dart';
 import 'package:lite_server/src/lite_server.dart';
 
+import 'routes/home.dart';
+
 void main(List<String> arguments) async {
   final liteServer = LiteServer(
     services: [
@@ -11,11 +13,14 @@ void main(List<String> arguments) async {
       CorsOriginService(),
     ],
     routes: [
+      homeRoute,
       HttpRoute.get(
         '/',
         handler: (request, payload) {
-          throw Exception('Error test');
+          // throw Exception('Error test');
           // request.response.redirect(Uri(path: '/api/users'));
+          final cwd = Directory.current.path;
+          request.response.file('$cwd/assets/web/images/512.png');
         },
         routes: [
           HttpRoute.get(
@@ -24,7 +29,7 @@ void main(List<String> arguments) async {
               HttpRoute.get(
                 'users',
                 handler: (request, payload) async {
-                  request.response.json([]).close();
+                  await request.response.json([]);
                 },
               ),
             ],
@@ -42,8 +47,7 @@ void main(List<String> arguments) async {
         '/post',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-
-          request.response.text('posted').close();
+          await request.response.text('posted');
         },
       ),
       HttpRoute.post(
@@ -57,7 +61,7 @@ void main(List<String> arguments) async {
             }
           }
 
-          request.response.text('uploaded').close();
+          await request.response.text('uploaded');
         },
       ),
       HttpStaticRoute(

@@ -1,49 +1,73 @@
 part of 'lite_server.dart';
 
 extension HttpResponseHelpers on HttpResponse {
-  HttpResponse ok(Object? body, {ContentType? contentType}) {
+  Future<void> ok(Object? body, {ContentType? contentType}) async {
     headers.contentType = contentType ?? ContentType.text;
     write(body);
-    return this;
+    await close();
   }
 
-  HttpResponse status(int code) {
+  Future<void> status(int code, {String? message}) async {
     statusCode = code;
-    return this;
+
+    if (message != null) {
+      reasonPhrase = message;
+    }
+
+    await close();
   }
 
-  HttpResponse json<T>(T data) {
+  Future<void> json<T>(T data) async {
     headers.contentType = ContentType.json;
     write(jsonEncode(data));
-    return this;
+    await close();
   }
 
   /// Default content type = ContentType.text
-  HttpResponse text(String data, {ContentType? contentType}) {
+  Future<void> text(String data, {ContentType? contentType}) async {
     headers.contentType = contentType ?? ContentType.text;
     write(data);
-    return this;
+    await close();
   }
 
-  HttpResponse html(String data) {
+  Future<void> html(String data) async {
     headers.contentType = ContentType.html;
     write(data);
-    return this;
+    await close();
   }
 
-  HttpResponse unauthorized() {
+  Future<void> unauthorized() async {
     statusCode = HttpStatus.unauthorized;
-    return this;
+    await close();
   }
 
-  HttpResponse badRequest([String? message]) {
+  Future<void> badRequest([String? message]) async {
     statusCode = HttpStatus.badRequest;
 
     if (message != null) {
       reasonPhrase = message;
     }
 
-    return this;
+    await close();
+  }
+
+  Future<void> file(String path, {String? mimeType}) async {
+    final bytes = File(path).readAsBytesSync();
+    final mime = mimeType ?? lookupMimeType(path);
+
+    if (mime == null) {
+      statusCode = HttpStatus.internalServerError;
+      reasonPhrase = 'Mime-Type can\'t resolved.';
+      await close();
+      return;
+    }
+
+    headers.contentLength = bytes.length;
+    headers.set('content-type', mime);
+
+    add(bytes);
+
+    await close();
   }
 }
 

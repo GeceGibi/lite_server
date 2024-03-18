@@ -143,7 +143,7 @@ class LiteServer {
       /// Check Global services
       for (final service in services) {
         service._onErrorStream = _onErrorStreamController.stream;
-        final behavior = await service.handleRequest(request);
+        final behavior = await service.onRequest(request);
 
         if (!behavior.moveOn) {
           return;
@@ -162,7 +162,7 @@ class LiteServer {
 
       for (final service in routeMapper.services) {
         service._onErrorStream = _onErrorStreamController.stream;
-        final behavior = await service.handleRequest(request);
+        final behavior = await service.onRequest(request);
 
         if (!behavior.moveOn) {
           return;
