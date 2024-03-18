@@ -1,5 +1,5 @@
 ## 0.0.6
-- Update response helper extension methods. `Not need to call .close() anymore.`
+- Update response helper extension methods. `Not need to call .close() anymore`
 - Update logger service
 
 ## 0.0.5
