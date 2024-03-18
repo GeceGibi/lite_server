@@ -1,3 +1,6 @@
+## 0.0.6+1
+- Fix null-check issue.
+
 ## 0.0.6
 - Update response helper extension methods. `Not need to call .close() anymore`
 - Update logger service

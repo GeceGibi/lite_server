@@ -36,7 +36,8 @@ class LoggerService extends HttpService with LiteLogger {
   LoggerService({
     this.cleanLogsOnStart = true,
     this.logErrors = true,
-    // not recommend to use for now. Had a performance issues.
+
+    /// not recommend to use for now. Has a performance issues.
     this.logRequests = true,
     this.printLogs = true,
   }) {
@@ -66,10 +67,11 @@ class LoggerService extends HttpService with LiteLogger {
         now.toIso8601String(),
         clock.elapsed.toString(),
         request.method,
-        [
-          request.connectionInfo!.remoteAddress.address,
-          request.connectionInfo!.remotePort
-        ].join(':'),
+        if (request.connectionInfo != null)
+          [
+            request.connectionInfo!.remoteAddress.address,
+            request.connectionInfo!.remotePort
+          ].join(':'),
         request.response.statusCode,
         request.response.headers.contentType,
         request.uri,
