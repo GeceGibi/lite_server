@@ -31,7 +31,7 @@ void main(List<String> arguments) async {
               HttpRoute.get(
                 'users',
                 handler: (request, payload) async {
-                  await request.response.json('[]').close();
+                  await request.response.json('[]');
                 },
               ),
             ],
@@ -42,7 +42,7 @@ void main(List<String> arguments) async {
         '/user/<id>',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-          request.response.json(jsonEncode(payload.pathParameters));
+          request.response.json(payload.pathParameters);
         },
       ),
       HttpRoute.post(
@@ -50,7 +50,7 @@ void main(List<String> arguments) async {
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
 
-          request.response.text('posted').close();
+          request.response.text('posted');
         },
       ),
       HttpRoute.post(
@@ -64,7 +64,7 @@ void main(List<String> arguments) async {
             }
           }
 
-          request.response.text('uploaded').close();
+          request.response.text('uploaded');
         },
       ),
       HttpStaticRoute(
