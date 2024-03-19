@@ -126,16 +126,16 @@ class LoggerService extends HttpService with LiteLogger {
 
 class CorsOriginService extends HttpService {
   CorsOriginService({
-    this.allowedOrigins = const ['*'],
-    this.allowedHeaders = defaultAllowedHeaders,
-    this.allowedMethods = defaultAllowedMethods,
+    this.allowedOrigins = const {'*'},
+    this.allowedHeaders = headers,
+    this.allowedMethods = methods,
   });
 
-  final List<String> allowedOrigins;
-  final List<String> allowedHeaders;
-  final List<String> allowedMethods;
+  final Set<String> allowedOrigins;
+  final Set<String> allowedHeaders;
+  final Set<String> allowedMethods;
 
-  static const defaultAllowedHeaders = [
+  static const headers = {
     'access-control-allow-origin',
     'accept',
     'accept-encoding',
@@ -144,16 +144,16 @@ class CorsOriginService extends HttpService {
     'dnt',
     'origin',
     'user-agent',
-  ];
+  };
 
-  static const defaultAllowedMethods = [
+  static const methods = {
     'DELETE',
     'GET',
     'OPTIONS',
     'PATCH',
     'POST',
-    'PUT'
-  ];
+    'PUT',
+  };
 
   @override
   FutureOr<HttpServiceBehavior> onRequest(HttpRequest request) {
