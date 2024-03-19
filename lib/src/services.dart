@@ -160,7 +160,7 @@ class CorsOriginService extends HttpService {
     final corsHeaders = {
       'Access-Control-Expose-Headers': [''],
       'Access-Control-Allow-Credentials': ['true'],
-      'Access-Control-Allow-Origin': allowedOrigins,
+      'Access-Control-Allow-Origin': allowedOrigins.toList(),
       'Access-Control-Max-Age': [Duration(hours: 24).inSeconds.toString()],
       'Access-Control-Allow-Headers': [allowedHeaders.join(',')],
       'Access-Control-Allow-Methods': [allowedMethods.join(',')],

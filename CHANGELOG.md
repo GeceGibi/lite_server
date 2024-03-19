@@ -1,3 +1,6 @@
+## 0.0.8
+- Update `CorsOriginService` 
+
 ## 0.0.7
 - Fix null-check issue.
 

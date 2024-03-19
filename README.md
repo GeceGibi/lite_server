@@ -16,7 +16,9 @@ void main(List<String> arguments) async {
   final liteServer = LiteServer(
     services: [
       LoggerService(),
-      CorsOriginService(),
+      CorsOriginService(
+        allowedMethods: {'GET', 'POST'}
+      ),
     ],
     routes: [
       HttpRoute.get(
