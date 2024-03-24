@@ -1,8 +1,11 @@
 ## 0.0.8
-- Update `CorsOriginService` 
+- Added missing `service` argument for `HttpStaticRoute` 
+
+## 0.0.8
+- Updated `CorsOriginService` 
 
 ## 0.0.7
-- Fix null-check issue.
+- Fixed null-check issue.
 
 ## 0.0.6
 - Update response helper extension methods. `Not need to call .close() anymore`

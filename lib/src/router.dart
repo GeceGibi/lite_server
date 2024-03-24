@@ -54,6 +54,7 @@ class HttpStaticRoute extends HttpRoute {
   HttpStaticRoute(
     super.path, {
     super.methods = const {'GET'},
+    super.services,
     required String directoryPath,
     String? defaultDocument,
     bool listDirectory = false,
