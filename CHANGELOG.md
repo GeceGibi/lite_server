@@ -1,3 +1,6 @@
+## 0.1.0
+- Fixed allowed methods check logic
+
 ## 0.0.9
 - Added missing `service` argument for `HttpStaticRoute` 
 

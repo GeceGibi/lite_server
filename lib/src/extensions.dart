@@ -41,6 +41,11 @@ extension HttpResponseHelpers on HttpResponse {
     await close();
   }
 
+  Future<void> methodNotAllowed() async {
+    statusCode = HttpStatus.methodNotAllowed;
+    await close();
+  }
+
   Future<void> badRequest([String? message]) async {
     statusCode = HttpStatus.badRequest;
 

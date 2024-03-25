@@ -157,6 +157,11 @@ class CorsOriginService extends HttpService {
 
   @override
   FutureOr<HttpServiceBehavior> onRequest(HttpRequest request) {
+    if (!allowedMethods.contains(request.method)) {
+      request.response.methodNotAllowed();
+      return HttpServiceBehavior.revoke();
+    }
+
     final corsHeaders = {
       'Access-Control-Expose-Headers': [''],
       'Access-Control-Allow-Credentials': ['true'],

@@ -10,7 +10,9 @@ void main(List<String> arguments) async {
   final liteServer = LiteServer(
     services: [
       LoggerService(),
-      CorsOriginService(),
+      CorsOriginService(
+        allowedMethods: {'GET', 'POST', 'OPTIONS'},
+      ),
     ],
     routes: [
       homeRoute,
@@ -81,6 +83,7 @@ void main(List<String> arguments) async {
     await Isolate.spawn(startServer, liteServer);
   }
 
+  print(liteServer.routeMap.keys.join('\n'));
   await startServer(liteServer);
 }
 

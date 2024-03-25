@@ -25,8 +25,9 @@ class LiteServer {
   final List<HttpRoute> routes;
 
   /// local vars
-  final _servers = <HttpServer>[];
-  final _routeMap = <String, _HttpRouteMapper>{};
+  final routeMap = <String, _HttpRouteMapper>{};
+
+  ///
   final _onErrorStreamController =
       StreamController<HttpRequestError>.broadcast();
 
@@ -49,7 +50,6 @@ class LiteServer {
   }
 
   void attach(HttpServer server) {
-    _servers.add(server);
     server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
     print('LiteServer running on(${server.address.address}:${server.port})');
   }
@@ -83,14 +83,14 @@ class LiteServer {
       }
 
       final normalizedPath = HttpUtils.normalizePath(paths);
-      _routeMap[normalizedPath] = _HttpRouteMapper(route, services);
+      routeMap[normalizedPath] = _HttpRouteMapper(route, services);
     }
 
     return (parentPaths, parentServices);
   }
 
   void generateRouteMap() {
-    _routeMap.clear();
+    routeMap.clear();
     _genRouteMap(routes, [], []);
   }
 
@@ -99,7 +99,7 @@ class LiteServer {
     String method,
     List<HttpRoute>? searchRoutes,
   ) {
-    for (final entry in _routeMap.entries) {
+    for (final entry in routeMap.entries) {
       ///! Static file path
       if (entry.value.route is HttpStaticRoute) {
         if (requestPath.startsWith(entry.key)) {
@@ -155,8 +155,15 @@ class LiteServer {
       /// Find route if request not cut off from services
       final (routeMapper, pathParameters) = findRoute(request);
 
+      /// Check route is founded
       if (routeMapper == null) {
         onRouteNotFound(request);
+        return;
+      }
+
+      /// check methods is allowed for route
+      else if (!routeMapper.route.methods.contains(request.method)) {
+        request.response.methodNotAllowed();
         return;
       }
 
