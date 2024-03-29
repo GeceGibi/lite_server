@@ -36,7 +36,7 @@ class HttpRoute {
           'HEAD',
           'PATCH',
           'DELETE',
-          'PUT'
+          'PUT',
         };
 
   final String path;
@@ -53,9 +53,9 @@ class HttpRoute {
 class HttpStaticRoute extends HttpRoute {
   HttpStaticRoute(
     super.path, {
+    required String directoryPath,
     super.methods = const {'GET'},
     super.services,
-    required String directoryPath,
     String? defaultDocument,
     bool listDirectory = false,
   }) : super(
@@ -75,8 +75,12 @@ class HttpStaticRoute extends HttpRoute {
 
               /// ls
               else if (listDirectory) {
+                final files = dir.listSync().where((element) {
+                  return element.statSync().type == FileSystemEntityType.file;
+                });
+
                 final content = [
-                  for (var element in dir.listSync())
+                  for (final element in files)
                     '$path/${element.path.split('/').last}',
                 ];
 
@@ -115,6 +119,6 @@ class HttpStaticRoute extends HttpRoute {
 
   static String _getListDirectoryHtml(List<String> items) {
     final li = [for (final item in items) '<li><a href="$item">$item</a></li>'];
-    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body><ul>${li.join('')}</ul></body></html>';
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body><ul>${li.join()}</ul></body></html>';
   }
 }

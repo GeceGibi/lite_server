@@ -1,18 +1,29 @@
 part of 'lite_server.dart';
 
 extension HttpResponseHelpers on HttpResponse {
-  Future<void> ok(Object? body, {ContentType? contentType}) async {
-    headers.contentType = contentType ?? ContentType.text;
+  Future<void> ok(
+    Object? body, {
+    String? message,
+    ContentType? contentType,
+  }) async {
+    headers.contentType = contentType;
+
+    if (message != null) {
+      reasonPhrase = message;
+    }
+
     write(body);
     await close();
   }
 
-  Future<void> status(int code, {String? message}) async {
+  Future<void> status(int code, {Object? body, String? message}) async {
     statusCode = code;
 
     if (message != null) {
       reasonPhrase = message;
     }
+
+    write(body);
 
     await close();
   }
@@ -23,17 +34,8 @@ extension HttpResponseHelpers on HttpResponse {
     await close();
   }
 
-  /// Default content type = ContentType.text
-  Future<void> text(String data, {ContentType? contentType}) async {
-    headers.contentType = contentType ?? ContentType.text;
-    write(data);
-    await close();
-  }
-
-  Future<void> html(String data) async {
-    headers.contentType = ContentType.html;
-    write(data);
-    await close();
+  Future<void> html(String data) {
+    return ok(data, contentType: ContentType.html);
   }
 
   Future<void> unauthorized() async {
@@ -41,8 +43,23 @@ extension HttpResponseHelpers on HttpResponse {
     await close();
   }
 
+  Future<void> notFound() async {
+    statusCode = HttpStatus.notFound;
+    await close();
+  }
+
   Future<void> methodNotAllowed() async {
     statusCode = HttpStatus.methodNotAllowed;
+    await close();
+  }
+
+  Future<void> internalServerError({String? message}) async {
+    statusCode = HttpStatus.internalServerError;
+
+    if (message != null) {
+      reasonPhrase = message;
+    }
+
     await close();
   }
 
@@ -61,14 +78,14 @@ extension HttpResponseHelpers on HttpResponse {
     final mime = mimeType ?? lookupMimeType(path);
 
     if (mime == null) {
-      statusCode = HttpStatus.internalServerError;
-      reasonPhrase = 'Mime-Type can\'t resolved.';
-      await close();
-      return;
+      return internalServerError(
+        message: "mime-type can't resolved.",
+      );
     }
 
-    headers.contentLength = bytes.length;
-    headers.set('content-type', mime);
+    headers
+      ..contentLength = bytes.length
+      ..set('content-type', mime);
 
     add(bytes);
 
@@ -120,13 +137,13 @@ extension HttpRequestHelpers on HttpRequest {
 
   Map<String, String> parseContentDisposition(String? contentDisposition) {
     final output = <String, String>{};
-    final pattern = RegExp(r'"(.+)"');
+    final pattern = RegExp('"(.+)"');
 
     if (contentDisposition == null) {
       return output;
     }
 
-    var params = <String>[];
+    final params = <String>[];
 
     for (final entry in contentDisposition.split(';')) {
       if (entry.contains('=')) {

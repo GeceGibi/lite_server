@@ -30,8 +30,8 @@ void main(List<String> arguments) async {
             routes: [
               HttpRoute.get(
                 'users',
-                handler: (request, payload) async {
-                  await request.response.json([]);
+                handler: (request, payload) {
+                  request.response.json([]);
                 },
               ),
             ],
@@ -42,14 +42,14 @@ void main(List<String> arguments) async {
         '/user/<id>',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-          request.response.json(jsonEncode(payload.pathParameters));
+          await request.response.json(payload.pathParameters);
         },
       ),
       HttpRoute.post(
         '/post',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-          await request.response.text('posted');
+          await request.response.ok('posted');
         },
       ),
       HttpRoute.post(
@@ -63,7 +63,7 @@ void main(List<String> arguments) async {
             }
           }
 
-          await request.response.text('uploaded');
+          await request.response.ok('uploaded');
         },
       ),
       HttpStaticRoute(
@@ -96,5 +96,5 @@ Future<void> startServer(LiteServer liteServer) async {
     ..autoCompress = true
     ..serverHeader = Isolate.current.hashCode.toString();
 
-  liteServer.attach(server);
+  liteServer.listen(server);
 }

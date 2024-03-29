@@ -15,8 +15,8 @@ class LiteServer {
   LiteServer({
     this.routes = const [],
     this.services = const [],
-    this.onError = _defaultErrorHandler,
-    this.onRouteNotFound = _defaultRouteNotFound,
+    this.onError,
+    this.onRouteNotFound,
   }) {
     generateRouteMap();
   }
@@ -31,26 +31,17 @@ class LiteServer {
   final _onErrorStreamController =
       StreamController<HttpRequestError>.broadcast();
 
-  final void Function(HttpRequest request) onRouteNotFound;
-  final void Function(HttpRequest request, Object? error, StackTrace stackTrace)
-      onError;
-
-  static void _defaultRouteNotFound(HttpRequest request) {
-    request.response.statusCode = HttpStatus.notFound;
-    request.response.close();
-  }
-
-  static void _defaultErrorHandler(
+  final void Function(HttpRequest request)? onRouteNotFound;
+  final void Function(
     HttpRequest request,
     Object? error,
     StackTrace stackTrace,
-  ) {
-    request.response.statusCode = HttpStatus.internalServerError;
-    request.response.close();
-  }
+  )? onError;
 
-  void attach(HttpServer server) {
+  void listen(HttpServer server) {
     server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
+
+    // ignore: avoid_print
     print('LiteServer running on(${server.address.address}:${server.port})');
   }
 
@@ -136,7 +127,7 @@ class LiteServer {
     );
   }
 
-  void requestHandler(HttpRequest request) async {
+  Future<void> requestHandler(HttpRequest request) async {
     try {
       final extras = <String, Object?>{};
 
@@ -145,25 +136,30 @@ class LiteServer {
         service._onErrorStream = _onErrorStreamController.stream;
         final behavior = await service.onRequest(request);
 
-        if (!behavior.moveOn) {
+        if (!behavior.next) {
           return;
         }
 
         extras.addAll(behavior.extra);
       }
 
-      /// Find route if request not cut off from services
+      /// Find route if request is not cut off from services
       final (routeMapper, pathParameters) = findRoute(request);
 
-      /// Check route is founded
+      ///! Check route is founded
       if (routeMapper == null) {
-        onRouteNotFound(request);
+        if (onRouteNotFound != null) {
+          onRouteNotFound!(request);
+          return;
+        }
+
+        await request.response.notFound();
         return;
       }
 
-      /// check methods is allowed for route
+      ///! check methods is allowed for route
       else if (!routeMapper.route.methods.contains(request.method)) {
-        request.response.methodNotAllowed();
+        await request.response.methodNotAllowed();
         return;
       }
 
@@ -171,7 +167,7 @@ class LiteServer {
         service._onErrorStream = _onErrorStreamController.stream;
         final behavior = await service.onRequest(request);
 
-        if (!behavior.moveOn) {
+        if (!behavior.next) {
           return;
         }
 
@@ -185,8 +181,16 @@ class LiteServer {
 
       await routeMapper.route.handler!(request, payload);
     } catch (error, stack) {
-      onError(request, error, stack);
+      /// Call services
       _onErrorStreamController.add(HttpRequestError(request, error, stack));
+
+      ///
+      if (onError != null) {
+        onError!(request, error, stack);
+        return;
+      }
+
+      await request.response.internalServerError();
     }
   }
 }

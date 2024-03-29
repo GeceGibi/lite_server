@@ -2,7 +2,9 @@
 
 part of 'lite_server.dart';
 
+/// Common requests handler before request accessed target route.
 abstract class HttpService {
+  // ignore: avoid_setters_without_getters
   set _onErrorStream(Stream<HttpRequestError> stream) {
     stream.listen((event) {
       onError(event.request, event.error, event.stackTrace);
@@ -19,26 +21,29 @@ abstract class HttpService {
 
 /// ! --------------------------------------------------------------------------
 class HttpServiceBehavior {
+  /// Revoke request and cut it off
+  /// Must handle request before call this
   HttpServiceBehavior.revoke()
-      : moveOn = false,
+      : next = false,
         extra = const {};
 
+  /// Just move next
   HttpServiceBehavior.next({
     this.extra = const {},
-  }) : moveOn = true;
+  }) : next = true;
 
-  final bool moveOn;
+  final bool next;
   final Map<String, Object?> extra;
 }
 
 /// ! --------------------------------------------------------------------------
 class LoggerService extends HttpService with LiteLogger {
   LoggerService({
-    this.cleanLogsOnStart = true,
-    this.logErrors = true,
+    this.cleanLogsOnStart = false,
+    this.logErrors = false,
 
     /// not recommend to use for now. Has a performance issues.
-    this.logRequests = true,
+    this.logRequests = false,
     this.printLogs = true,
   }) {
     if (cleanLogsOnStart) {
@@ -69,8 +74,8 @@ class LoggerService extends HttpService with LiteLogger {
         request.method,
         if (request.connectionInfo != null)
           [
-            request.connectionInfo!.remoteAddress.address,
-            request.connectionInfo!.remotePort
+            request.connectionInfo?.remoteAddress.address,
+            request.connectionInfo?.remotePort,
           ].join(':'),
         request.response.statusCode,
         request.response.headers.contentType,
@@ -78,6 +83,7 @@ class LoggerService extends HttpService with LiteLogger {
       ];
 
       if (printLogs) {
+        // ignore: avoid_print
         print(line.join(' | '));
       }
 
@@ -129,11 +135,17 @@ class CorsOriginService extends HttpService {
     this.allowedOrigins = const {'*'},
     this.allowedHeaders = headers,
     this.allowedMethods = methods,
+    this.maxAge = const Duration(hours: 24),
+    this.allowCredentials = true,
+    this.exposeHeaders = '',
   });
 
   final Set<String> allowedOrigins;
   final Set<String> allowedHeaders;
   final Set<String> allowedMethods;
+  final Duration maxAge;
+  final bool allowCredentials;
+  final String exposeHeaders;
 
   static const headers = {
     'access-control-allow-origin',
@@ -163,10 +175,10 @@ class CorsOriginService extends HttpService {
     }
 
     final corsHeaders = {
-      'Access-Control-Expose-Headers': [''],
-      'Access-Control-Allow-Credentials': ['true'],
+      'Access-Control-Expose-Headers': [exposeHeaders],
+      'Access-Control-Allow-Credentials': ['$allowCredentials'],
       'Access-Control-Allow-Origin': allowedOrigins.toList(),
-      'Access-Control-Max-Age': [Duration(hours: 24).inSeconds.toString()],
+      'Access-Control-Max-Age': [maxAge.inSeconds.toString()],
       'Access-Control-Allow-Headers': [allowedHeaders.join(',')],
       'Access-Control-Allow-Methods': [allowedMethods.join(',')],
     };
@@ -176,8 +188,7 @@ class CorsOriginService extends HttpService {
     }
 
     if (request.method == 'OPTIONS') {
-      request.response.statusCode = HttpStatus.ok;
-      request.response.close();
+      request.response.ok(null);
       return HttpServiceBehavior.revoke();
     }
 
