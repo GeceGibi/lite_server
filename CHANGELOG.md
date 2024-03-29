@@ -1,3 +1,7 @@
+## 0.1.1
+- Fixed typos
+- Fixed minor issues
+
 ## 0.1.0
 - Fixed allowed methods check logic
 
