@@ -1,10 +1,10 @@
 ## LiteServer
-Lightweight Http server for Dart.
+Lightweight HttpServer wrapper for Dart.
 
 ## Features
 - Easy to use
 - Lightweight 
-- Dynamic Path `/user/<id>`
+- Dynamic Path Support `/user/<id>`
 - Nested Routes
 - Static file handler
 - MultipartFile support
@@ -17,14 +17,18 @@ void main(List<String> arguments) async {
     services: [
       LoggerService(),
       CorsOriginService(
-        allowedMethods: {'GET', 'POST'}
+        allowedMethods: {'GET', 'POST', 'OPTIONS'},
       ),
     ],
     routes: [
+      homeRoute,
       HttpRoute.get(
         '/',
         handler: (request, payload) {
-          await request.response.redirect(Uri(path: '/api/users'));
+          // throw Exception('Error test');
+          // request.response.redirect(Uri(path: '/api/users'));
+          final cwd = Directory.current.path;
+          request.response.file('$cwd/assets/web/images/512.png');
         },
         routes: [
           HttpRoute.get(
@@ -32,8 +36,8 @@ void main(List<String> arguments) async {
             routes: [
               HttpRoute.get(
                 'users',
-                handler: (request, payload) async {
-                  await request.response.json('[]');
+                handler: (request, payload) {
+                  request.response.json([]);
                 },
               ),
             ],
@@ -44,15 +48,14 @@ void main(List<String> arguments) async {
         '/user/<id>',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-          request.response.json(payload.pathParameters);
+          await request.response.json(payload.pathParameters);
         },
       ),
       HttpRoute.post(
         '/post',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-
-          request.response.text('posted');
+          await request.response.ok('posted');
         },
       ),
       HttpRoute.post(
@@ -66,7 +69,7 @@ void main(List<String> arguments) async {
             }
           }
 
-          request.response.text('uploaded');
+          await request.response.ok('uploaded');
         },
       ),
       HttpStaticRoute(
@@ -86,6 +89,7 @@ void main(List<String> arguments) async {
     await Isolate.spawn(startServer, liteServer);
   }
 
+  print(liteServer.routeMap.keys.join('\n'));
   await startServer(liteServer);
 }
 
@@ -98,7 +102,6 @@ Future<void> startServer(LiteServer liteServer) async {
     ..autoCompress = true
     ..serverHeader = Isolate.current.hashCode.toString();
 
-  liteServer.attach(server);
+  liteServer.listen(server);
 }
-
 ```

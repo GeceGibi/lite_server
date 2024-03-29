@@ -1,3 +1,6 @@
+## 0.1.2
+- Update Example
+
 ## 0.1.1
 - Fixed typos
 - Fixed minor issues
