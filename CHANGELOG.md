@@ -1,3 +1,7 @@
+## 0.1.3
+- Update Request Logger
+- Renamed `HttpService` to `HttpController` and update error handle logic
+
 ## 0.1.2
 - Update Example
 

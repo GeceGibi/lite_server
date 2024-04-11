@@ -1,16 +1,9 @@
 part of 'lite_server.dart';
 
 class _HttpRouteMapper {
-  const _HttpRouteMapper(this.route, this.services);
+  const _HttpRouteMapper(this.route, this.controllers);
   final HttpRoute route;
-  final List<HttpService> services;
-}
-
-class HttpRequestError {
-  const HttpRequestError(this.request, this.error, this.stackTrace);
-  final HttpRequest request;
-  final Object? error;
-  final StackTrace stackTrace;
+  final List<HttpController> controllers;
 }
 
 class HttpRoutePayload {

@@ -6,28 +6,28 @@ class HttpRoute {
     this.path, {
     required this.methods,
     this.handler,
-    this.services,
+    this.controllers,
     this.routes,
   });
 
   const HttpRoute.get(
     this.path, {
     this.handler,
-    this.services,
+    this.controllers,
     this.routes,
   }) : methods = const {'GET'};
 
   const HttpRoute.post(
     this.path, {
     this.handler,
-    this.services,
+    this.controllers,
     this.routes,
   }) : methods = const {'POST'};
 
   const HttpRoute.all(
     this.path, {
     this.handler,
-    this.services,
+    this.controllers,
     this.routes,
   }) : methods = const {
           'POST',
@@ -45,7 +45,7 @@ class HttpRoute {
       handler;
 
   final List<HttpRoute>? routes;
-  final List<HttpService>? services;
+  final List<HttpController>? controllers;
 }
 
 ///! ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ class HttpStaticRoute extends HttpRoute {
     super.path, {
     required String directoryPath,
     super.methods = const {'GET'},
-    super.services,
+    super.controllers,
     String? defaultDocument,
     bool listDirectory = false,
   }) : super(
@@ -84,9 +84,10 @@ class HttpStaticRoute extends HttpRoute {
                     '$path/${element.path.split('/').last}',
                 ];
 
-                request.response.headers.contentType = ContentType.html;
-                request.response.write(_getListDirectoryHtml(content));
-                request.response.close();
+                request.response.ok(
+                  _getListDirectoryHtml(content),
+                  contentType: ContentType.html,
+                );
                 return;
               }
             }
@@ -94,20 +95,20 @@ class HttpStaticRoute extends HttpRoute {
             final file = File('${dir.path}/$fileName');
 
             if (!file.existsSync()) {
-              request.response.statusCode = HttpStatus.notFound;
-              request.response.close();
+              request.response.notFound();
+              return;
+            }
+
+            final mimeType = lookupMimeType('${dir.path}/$fileName');
+
+            if (mimeType == null) {
+              request.response.internalServerError(
+                message: 'Mime-Type not found',
+              );
               return;
             }
 
             final bytes = file.readAsBytesSync();
-            final mimeType = lookupMimeType('${dir.path}/$fileName');
-
-            if (mimeType == null) {
-              request.response.statusCode = HttpStatus.internalServerError;
-              request.response.reasonPhrase = 'Mime-Type not found';
-              request.response.close();
-              return;
-            }
 
             request.response.headers.contentLength = bytes.length;
             request.response.headers.contentType = ContentType.parse(mimeType);

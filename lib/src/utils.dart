@@ -1,15 +1,8 @@
 part of 'lite_server.dart';
 
-interface class HttpUtils {
-  static const pathPatternGroup = '([a-zA-Z0-9_.]+)';
+interface class _HttpUtils {
+  static const pathPatternGroup = r"([a-zA-Z0-9-._~:@!$&'()*+,;=]*)";
   static final pathPattern = RegExp('<$pathPatternGroup>');
-
-  static String pathCorrection(String segment) {
-    return switch (segment) {
-      '' => '/',
-      _ => segment,
-    };
-  }
 
   static String normalizePath(List<String> paths) {
     return paths.join('/').replaceAll('//', '/');
@@ -20,10 +13,12 @@ interface class HttpUtils {
     String mappedRoutePath,
   ) {
     final escapedRoutePath = RegExp.escape(mappedRoutePath);
-    final dynamicPath = RegExp(escapedRoutePath.replaceAllMapped(
-      pathPattern,
-      (match) => pathPatternGroup,
-    ));
+    final dynamicPath = RegExp(
+      escapedRoutePath.replaceAllMapped(
+        pathPattern,
+        (match) => pathPatternGroup,
+      ),
+    );
 
     if (dynamicPath.hasMatch(requestPath)) {
       final key = pathPattern.firstMatch(escapedRoutePath)!.group(1)!;

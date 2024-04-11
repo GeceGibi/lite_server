@@ -5,31 +5,26 @@ import 'dart:io';
 import 'package:mime/mime.dart';
 
 part 'router.dart';
-part 'services.dart';
+part 'controller.dart';
 part 'utils.dart';
-part 'logger.dart';
 part 'extensions.dart';
 part 'models.dart';
 
 class LiteServer {
   LiteServer({
     this.routes = const [],
-    this.services = const [],
+    this.controllers = const [],
     this.onError,
     this.onRouteNotFound,
   }) {
     generateRouteMap();
   }
 
-  final List<HttpService> services;
+  final List<HttpController> controllers;
   final List<HttpRoute> routes;
 
   /// local vars
   final routeMap = <String, _HttpRouteMapper>{};
-
-  ///
-  final _onErrorStreamController =
-      StreamController<HttpRequestError>.broadcast();
 
   final void Function(HttpRequest request)? onRouteNotFound;
   final void Function(
@@ -45,9 +40,9 @@ class LiteServer {
     print('LiteServer running on(${server.address.address}:${server.port})');
   }
 
-  (List<String>, List<HttpService>) _genRouteMap(
+  (List<String>, List<HttpController>) _genRouteMap(
     List<HttpRoute> routes,
-    List<HttpService> parentServices,
+    List<HttpController> parentControllers,
     List<String> parentPaths,
   ) {
     for (final route in routes) {
@@ -65,7 +60,7 @@ class LiteServer {
 
       final (paths, services) = _genRouteMap(
         route.routes ?? [],
-        [...parentServices, ...?route.services],
+        [...parentControllers, ...?route.controllers],
         [...parentPaths, route.path],
       );
 
@@ -73,11 +68,11 @@ class LiteServer {
         continue;
       }
 
-      final normalizedPath = HttpUtils.normalizePath(paths);
+      final normalizedPath = _HttpUtils.normalizePath(paths);
       routeMap[normalizedPath] = _HttpRouteMapper(route, services);
     }
 
-    return (parentPaths, parentServices);
+    return (parentPaths, parentControllers);
   }
 
   void generateRouteMap() {
@@ -99,8 +94,8 @@ class LiteServer {
       }
 
       ///! Dynamic paths
-      else if (HttpUtils.pathPattern.hasMatch(entry.key)) {
-        final (isMatched, params) = HttpUtils.routeHasMatch(
+      else if (_HttpUtils.pathPattern.hasMatch(entry.key)) {
+        final (isMatched, params) = _HttpUtils.routeHasMatch(
           requestPath,
           entry.key,
         );
@@ -128,13 +123,19 @@ class LiteServer {
   }
 
   Future<void> requestHandler(HttpRequest request) async {
+    final errorListeners = <void Function(
+      HttpRequest request,
+      Object? error,
+      StackTrace stackTrace,
+    )>[];
+
     try {
       final extras = <String, Object?>{};
 
       /// Check Global services
-      for (final service in services) {
-        service._onErrorStream = _onErrorStreamController.stream;
-        final behavior = await service.onRequest(request);
+      for (final controller in controllers) {
+        errorListeners.add(controller.onError);
+        final behavior = await controller.onRequest(request);
 
         if (!behavior.next) {
           return;
@@ -163,9 +164,9 @@ class LiteServer {
         return;
       }
 
-      for (final service in routeMapper.services) {
-        service._onErrorStream = _onErrorStreamController.stream;
-        final behavior = await service.onRequest(request);
+      for (final controller in routeMapper.controllers) {
+        errorListeners.add(controller.onError);
+        final behavior = await controller.onRequest(request);
 
         if (!behavior.next) {
           return;
@@ -182,7 +183,9 @@ class LiteServer {
       await routeMapper.route.handler!(request, payload);
     } catch (error, stack) {
       /// Call services
-      _onErrorStreamController.add(HttpRequestError(request, error, stack));
+      for (final callback in errorListeners) {
+        callback(request, error, stack);
+      }
 
       ///
       if (onError != null) {

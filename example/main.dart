@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -8,9 +9,9 @@ import 'routes/home.dart';
 
 void main(List<String> arguments) async {
   final liteServer = LiteServer(
-    services: [
-      LoggerService(),
-      CorsOriginService(
+    controllers: [
+      LoggerController(),
+      CorsOriginController(
         allowedMethods: {'GET', 'POST', 'OPTIONS'},
       ),
     ],
@@ -19,7 +20,7 @@ void main(List<String> arguments) async {
       HttpRoute.get(
         '/',
         handler: (request, payload) {
-          // throw Exception('Error test');
+          throw Exception('Error test');
           // request.response.redirect(Uri(path: '/api/users'));
           final cwd = Directory.current.path;
           request.response.file('$cwd/assets/web/images/512.png');
@@ -31,17 +32,23 @@ void main(List<String> arguments) async {
               HttpRoute.get(
                 'users',
                 handler: (request, payload) {
-                  request.response.json([]);
+                  request.response.json(<Object>[]);
                 },
               ),
             ],
-          )
+          ),
         ],
       ),
       HttpRoute.post(
         '/user/<id>',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
+          await request.response.json(payload.pathParameters);
+        },
+      ),
+      HttpRoute.get(
+        '/user/<id>',
+        handler: (request, payload) async {
           await request.response.json(payload.pathParameters);
         },
       ),
@@ -84,7 +91,9 @@ void main(List<String> arguments) async {
   }
 
   print(liteServer.routeMap.keys.join('\n'));
-  await startServer(liteServer);
+  // await startServer(liteServer);
+
+  await Future<void>.delayed(const Duration(seconds: 500));
 }
 
 Future<void> startServer(LiteServer liteServer) async {
