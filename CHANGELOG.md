@@ -1,9 +1,14 @@
+## 0.1.4
+- Updated LoggerController
+
 ## 0.1.3
-- Update Request Logger
+- Updated Request Logger
 - Renamed `HttpService` to `HttpController` and update error handle logic
+- Renamed `HttpServiceBehavior` to `HttpControllerBehavior`
+
 
 ## 0.1.2
-- Update Example
+- Updated Example
 
 ## 0.1.1
 - Fixed typos
@@ -22,8 +27,8 @@
 - Fixed null-check issue.
 
 ## 0.0.6
-- Update response helper extension methods. `Not need to call .close() anymore`
-- Update logger service
+- Updated response helper extension methods. `Not need to call .close() anymore`
+- Updated logger service
 
 ## 0.0.5
 - Renamed `HttpServiceBehavior.modeOn` => `HttpServiceBehavior.next`
@@ -31,7 +36,7 @@
 - Updated helpers extensions
 
 ## 0.0.4
-- Update Logger `printLogs` logic
+- Updated Logger `printLogs` logic
 
 ## 0.0.3
 - Moved logging params to LoggerService
@@ -39,7 +44,7 @@
 - HttpServices now return `HttpServiceBehavior`
 
 ## 0.0.2
-- Update LiteServer initialize method
+- Updated LiteServer initialize method
 
 ## 0.0.1
 - Initial version.

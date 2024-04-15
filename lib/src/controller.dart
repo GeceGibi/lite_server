@@ -29,31 +29,59 @@ class HttpControllerBehavior {
 ///
 ///
 
-class _Logger {
-  _Logger._() {
-    init();
+class LiteServerLogger {
+  LiteServerLogger._() {
+    _init();
   }
 
-  static final instance = _Logger._();
+  static final instance = LiteServerLogger._();
 
   Directory _directory = Directory('./logs');
   Directory get directory => _directory;
-  void setDirectory(String path) {
+  void setDirectory(String? path) {
+    if (path == null) {
+      return;
+    }
+
     _directory = Directory(path);
   }
 
   RandomAccessFile? fileRequests;
   RandomAccessFile? fileErrors;
 
-  void init() {
-    final requestsLogFile = File('${directory.path}/requests.log')
-      ..createSync(recursive: true);
+  String get fileName {
+    final now = DateTime.now();
+    final year = now.year;
+    final month = now.month.toString().padLeft(2, '0');
+    final day = now.day.toString().padLeft(2, '0');
+    return '$day-$month-$year.log';
+  }
 
-    final errorsLogFile = File('${directory.path}/errors.log')
-      ..create(recursive: true);
+  File get requestsLogFile => File('${directory.path}/requests/$fileName');
+  File get errorsLogFile => File('${directory.path}/errors/$fileName');
+
+  void _checkFilesAndCreateIfNeeded() {
+    if (!requestsLogFile.existsSync()) {
+      requestsLogFile.createSync(recursive: true);
+    }
+
+    if (!errorsLogFile.existsSync()) {
+      errorsLogFile.createSync(recursive: true);
+    }
 
     fileRequests = requestsLogFile.openSync(mode: FileMode.append);
     fileErrors = errorsLogFile.openSync(mode: FileMode.append);
+  }
+
+  Future<void> _init() async {
+    while (true) {
+      _checkFilesAndCreateIfNeeded();
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
+  }
+
+  void cleanLogs() {
+    directory.deleteSync(recursive: true);
   }
 
   String _clean(String line) {
@@ -69,77 +97,57 @@ class _Logger {
     return cleaned;
   }
 
-  void cleanFiles() {
-    fileRequests?.truncate(0);
-    fileErrors?.truncate(0);
-  }
-
-  void appendError(String line) {
+  void appendErrorLine(String line) {
     fileErrors
       ?..writeStringSync('${_clean(line)}\n')
       ..flushSync();
   }
 
-  void appendRequest(String line) {
+  void appendRequestLine(String line) {
     fileRequests
       ?..writeStringSync('${_clean(line)}\n')
       ..flushSync();
   }
 }
 
+enum LogLevel {
+  all,
+  errors,
+  requests,
+  none;
+}
+
 class LoggerController extends HttpController {
-  LoggerController({
-    this.logErrors = true,
-    this.logRequests = true,
-    this.printLogs = true,
-    this.logDirectory = './logs',
-  }) {
-    _Logger.instance
-      ..setDirectory(logDirectory)
-      ..cleanFiles();
+  LoggerController({this.level = LogLevel.none, this.directory}) {
+    LiteServerLogger.instance.setDirectory(directory);
   }
 
-  final bool logErrors;
-  final bool printLogs;
-  final bool logRequests;
-  final String logDirectory;
+  final LogLevel level;
+  final String? directory;
+
+  String get time => DateTime.now().toIso8601String();
 
   @override
   FutureOr<HttpControllerBehavior> onRequest(HttpRequest request) {
-    if (!printLogs && !logRequests) {
-      return HttpControllerBehavior.next();
-    }
-
-    final now = DateTime.now();
     final clock = Stopwatch()..start();
 
     request.response.done.then((value) {
       clock.stop();
 
       final line = [
-        now.toIso8601String(),
+        time,
         clock.elapsed.toString(),
         request.method,
-        if (request.connectionInfo != null)
-          [
-            request.connectionInfo!.remoteAddress.address,
-            request.connectionInfo!.remotePort,
-          ].join(':'),
         request.response.statusCode,
-        request.response.headers.contentType,
         request.uri,
-      ];
+      ].join(' | ');
 
-      if (printLogs) {
-        // ignore: avoid_print
-        print(line.join(' | '));
+      // ignore: avoid_print
+      print(line);
+
+      if (level case LogLevel.requests || LogLevel.all) {
+        LiteServerLogger.instance.appendRequestLine(line);
       }
-
-      if (!logRequests) {
-        return HttpControllerBehavior.next();
-      }
-
-      _Logger.instance.appendRequest(line.join(' | '));
     });
 
     return HttpControllerBehavior.next();
@@ -147,25 +155,14 @@ class LoggerController extends HttpController {
 
   @override
   void onError(HttpRequest request, Object? error, StackTrace stackTrace) {
-    if (!logErrors) {
-      return;
+    final line = [time, '${request.uri}', error, stackTrace].join(' | ');
+
+    // ignore: avoid_print
+    print(line);
+
+    if (level case LogLevel.errors || LogLevel.all) {
+      LiteServerLogger.instance.appendErrorLine(line);
     }
-
-    final now = DateTime.now();
-
-    final line = [
-      now.toIso8601String(),
-      if (request.connectionInfo != null)
-        [
-          request.connectionInfo!.remoteAddress.address,
-          request.connectionInfo!.remotePort,
-        ].join(':'),
-      '${request.uri}',
-      error,
-      stackTrace,
-    ];
-
-    _Logger.instance.appendError(line.join(' | '));
   }
 }
 

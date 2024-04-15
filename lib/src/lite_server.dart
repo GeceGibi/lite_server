@@ -37,7 +37,9 @@ class LiteServer {
     server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
 
     // ignore: avoid_print
-    print('LiteServer running on(${server.address.address}:${server.port})');
+    print(
+      'LiteServer running on(${server.address.address}:${server.port})',
+    );
   }
 
   (List<String>, List<HttpController>) _genRouteMap(

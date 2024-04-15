@@ -8,9 +8,11 @@ import 'package:lite_server/src/lite_server.dart';
 import 'routes/home.dart';
 
 void main(List<String> arguments) async {
+  LiteServerLogger.instance.cleanLogs();
+
   final liteServer = LiteServer(
     controllers: [
-      LoggerController(),
+      LoggerController(level: LogLevel.all),
       CorsOriginController(
         allowedMethods: {'GET', 'POST', 'OPTIONS'},
       ),
@@ -20,8 +22,8 @@ void main(List<String> arguments) async {
       HttpRoute.get(
         '/',
         handler: (request, payload) {
-          throw Exception('Error test');
-          // request.response.redirect(Uri(path: '/api/users'));
+          // throw Exception('Error test');
+          // // request.response.redirect(Uri(path: '/api/users'));
           final cwd = Directory.current.path;
           request.response.file('$cwd/assets/web/images/512.png');
         },
