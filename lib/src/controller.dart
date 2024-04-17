@@ -226,7 +226,8 @@ class CorsOriginController extends HttpController {
     }
 
     if (request.method == 'OPTIONS') {
-      request.response.ok(null);
+      request.response.statusCode = 204;
+      request.response.close();
       return HttpControllerBehavior.revoke();
     }
 

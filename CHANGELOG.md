@@ -1,3 +1,6 @@
+## 0.1.5
+- Updated `CorsOriginController` `OPTIONS` method response;
+
 ## 0.1.4
 - Updated LoggerController
 
