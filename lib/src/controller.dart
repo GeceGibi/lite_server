@@ -30,24 +30,11 @@ class HttpControllerBehavior {
 ///
 
 class LiteServerLogger {
-  LiteServerLogger._() {
-    _init();
+  LiteServerLogger({required String path}) : directory = Directory(path) {
+    _checkFilesAndCreate();
   }
 
-  static final instance = LiteServerLogger._();
-
-  Directory _directory = Directory('./logs');
-  Directory get directory => _directory;
-  void setDirectory(String? path) {
-    if (path == null) {
-      return;
-    }
-
-    _directory = Directory(path);
-  }
-
-  RandomAccessFile? fileRequests;
-  RandomAccessFile? fileErrors;
+  final Directory directory;
 
   String get fileName {
     final now = DateTime.now();
@@ -57,27 +44,23 @@ class LiteServerLogger {
     return '$day-$month-$year.log';
   }
 
-  File get requestsLogFile => File('${directory.path}/requests/$fileName');
-  File get errorsLogFile => File('${directory.path}/errors/$fileName');
+  late final logFileRequests = File('${directory.path}/requests/$fileName');
+  late final logFileErrors = File('${directory.path}/errors/$fileName');
 
-  void _checkFilesAndCreateIfNeeded() {
-    if (!requestsLogFile.existsSync()) {
-      requestsLogFile.createSync(recursive: true);
+  static RandomAccessFile? fileRequests;
+  static RandomAccessFile? fileErrors;
+
+  void _checkFilesAndCreate() {
+    if (!logFileRequests.existsSync()) {
+      logFileRequests.createSync(recursive: true);
     }
 
-    if (!errorsLogFile.existsSync()) {
-      errorsLogFile.createSync(recursive: true);
+    if (!logFileErrors.existsSync()) {
+      logFileErrors.createSync(recursive: true);
     }
 
-    fileRequests = requestsLogFile.openSync(mode: FileMode.append);
-    fileErrors = errorsLogFile.openSync(mode: FileMode.append);
-  }
-
-  Future<void> _init() async {
-    while (true) {
-      _checkFilesAndCreateIfNeeded();
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    }
+    fileRequests = logFileRequests.openSync(mode: FileMode.append);
+    fileErrors = logFileErrors.openSync(mode: FileMode.append);
   }
 
   void cleanLogs() {
@@ -118,12 +101,12 @@ enum LogLevel {
 }
 
 class LoggerController extends HttpController {
-  LoggerController({this.level = LogLevel.none, this.directory}) {
-    LiteServerLogger.instance.setDirectory(directory);
-  }
+  LoggerController({this.level = LogLevel.none, this.path = './logs'})
+      : logger = LiteServerLogger(path: path);
 
+  final LiteServerLogger logger;
   final LogLevel level;
-  final String? directory;
+  final String path;
 
   String get time => DateTime.now().toIso8601String();
 
@@ -146,7 +129,7 @@ class LoggerController extends HttpController {
       print(line);
 
       if (level case LogLevel.requests || LogLevel.all) {
-        LiteServerLogger.instance.appendRequestLine(line);
+        logger.appendRequestLine(line);
       }
     });
 
@@ -161,7 +144,7 @@ class LoggerController extends HttpController {
     print(line);
 
     if (level case LogLevel.errors || LogLevel.all) {
-      LiteServerLogger.instance.appendErrorLine(line);
+      logger.appendErrorLine(line);
     }
   }
 }

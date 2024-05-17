@@ -1,3 +1,7 @@
+## 0.2.0
+- Updated `LoggerController` work logic;
+- Relocated `LiteServer(controllers: [...])` => `LiteServer(...).listen(httpServer, controllers: [...])`
+
 ## 0.1.5
 - Updated `CorsOriginController` `OPTIONS` method response;
 

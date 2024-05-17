@@ -1,6 +1,6 @@
 name: lite_server
 description: Lite Http Server for Dart
-version: 0.1.5
+version: 0.2.0
 repository: https://github.com/GeceGibi/lite_server.git
 
 environment:

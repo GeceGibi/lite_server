@@ -8,15 +8,9 @@ import 'package:lite_server/src/lite_server.dart';
 import 'routes/home.dart';
 
 void main(List<String> arguments) async {
-  LiteServerLogger.instance.cleanLogs();
+  // LiteServerLogger.instance.cleanLogs();
 
   final liteServer = LiteServer(
-    controllers: [
-      LoggerController(level: LogLevel.all),
-      CorsOriginController(
-        allowedMethods: {'GET', 'POST', 'OPTIONS'},
-      ),
-    ],
     routes: [
       homeRoute,
       HttpRoute.get(
@@ -92,7 +86,7 @@ void main(List<String> arguments) async {
     await Isolate.spawn(startServer, liteServer);
   }
 
-  print(liteServer.routeMap.keys.join('\n'));
+  // print(liteServer.routeMap.keys.join('\n'));
   // await startServer(liteServer);
 
   await Future<void>.delayed(const Duration(seconds: 500));
@@ -107,5 +101,13 @@ Future<void> startServer(LiteServer liteServer) async {
     ..autoCompress = true
     ..serverHeader = Isolate.current.hashCode.toString();
 
-  liteServer.listen(server);
+  liteServer.listen(
+    server,
+    controllers: [
+      LoggerController(level: LogLevel.errors),
+      CorsOriginController(
+        allowedMethods: {'GET', 'POST', 'OPTIONS'},
+      ),
+    ],
+  );
 }

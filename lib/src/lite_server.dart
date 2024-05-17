@@ -11,21 +11,11 @@ part 'extensions.dart';
 part 'models.dart';
 
 class LiteServer {
-  LiteServer({
-    this.routes = const [],
-    this.controllers = const [],
-    this.onError,
-    this.onRouteNotFound,
-  }) {
+  LiteServer({this.routes = const [], this.onRouteNotFound, this.onError}) {
     generateRouteMap();
   }
 
-  final List<HttpController> controllers;
   final List<HttpRoute> routes;
-
-  /// local vars
-  final routeMap = <String, _HttpRouteMapper>{};
-
   final void Function(HttpRequest request)? onRouteNotFound;
   final void Function(
     HttpRequest request,
@@ -33,7 +23,17 @@ class LiteServer {
     StackTrace stackTrace,
   )? onError;
 
-  void listen(HttpServer server) {
+  ///
+  List<HttpController> controllers = [];
+
+  void listen(
+    HttpServer server, {
+    List<HttpController> controllers = const [],
+    // void Function(HttpRequest request)? onRouteNotFound,
+    void Function(HttpRequest request, Object? error, StackTrace stackTrace)?
+        onError,
+  }) {
+    this.controllers = controllers;
     server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
 
     // ignore: avoid_print
@@ -41,6 +41,9 @@ class LiteServer {
       'LiteServer running on(${server.address.address}:${server.port})',
     );
   }
+
+  ///
+  final routeMap = <String, _HttpRouteMapper>{};
 
   (List<String>, List<HttpController>) _genRouteMap(
     List<HttpRoute> routes,
