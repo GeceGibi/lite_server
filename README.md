@@ -6,20 +6,14 @@ Lightweight HttpServer wrapper for Dart.
 - Lightweight 
 - Dynamic Path Support `/user/<id>`
 - Nested Routes
-- Static file handler
+- Static file support
 - MultipartFile support
-- Support Custom Guard Services, manipulate request if need. 
+- Support Custom Guard Controllers, manipulate request if need. 
 
 ## Usage
 ```dart
 void main(List<String> arguments) async {
   final liteServer = LiteServer(
-    services: [
-      LoggerService(),
-      CorsOriginService(
-        allowedMethods: {'GET', 'POST', 'OPTIONS'},
-      ),
-    ],
     routes: [
       homeRoute,
       HttpRoute.get(
@@ -102,6 +96,14 @@ Future<void> startServer(LiteServer liteServer) async {
     ..autoCompress = true
     ..serverHeader = Isolate.current.hashCode.toString();
 
-  liteServer.listen(server);
+  liteServer.listen(
+    server,
+    controllers: [
+      LoggerController(level: LogLevel.errors),
+      CorsOriginController(
+        allowedMethods: {'GET', 'POST', 'OPTIONS'},
+      ),
+    ],
+  );
 }
 ```

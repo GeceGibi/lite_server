@@ -1,3 +1,6 @@
+## 0.2.1
+- Updated Readme.md
+
 ## 0.2.0
 - Updated `LoggerController` work logic;
 - Relocated `LiteServer(controllers: [...])` => `LiteServer(...).listen(httpServer, controllers: [...])`
