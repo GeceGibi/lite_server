@@ -1,3 +1,6 @@
+## 0.2.3
+- Fixed nested route multiple dynamic path parameter parse bug ex. `/<foo>/<bar>/<deep>/<path>/...`
+
 ## 0.2.1
 - Updated Readme.md
 

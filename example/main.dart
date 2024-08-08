@@ -47,6 +47,22 @@ void main(List<String> arguments) async {
         handler: (request, payload) async {
           await request.response.json(payload.pathParameters);
         },
+        routes: [
+          HttpRoute.get(
+            '<pack>',
+            handler: (request, payload) async {
+              await request.response.json(payload.pathParameters);
+            },
+            routes: [
+              HttpRoute.get(
+                '<dept>',
+                handler: (request, payload) async {
+                  await request.response.json(payload.pathParameters);
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       HttpRoute.post(
         '/post',

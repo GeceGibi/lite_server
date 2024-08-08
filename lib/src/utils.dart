@@ -1,8 +1,8 @@
 part of 'lite_server.dart';
 
 interface class _HttpUtils {
-  static const pathPatternGroup = r"([a-zA-Z0-9-._~:@!$&'()*+,;=]*)";
-  static final pathPattern = RegExp('<$pathPatternGroup>');
+  static const pathKey = r"([a-zA-Z0-9-._~:@!$&'()*+,;=]*)";
+  static final pathPattern = RegExp('<$pathKey>');
 
   static String normalizePath(List<String> paths) {
     return paths.join('/').replaceAll('//', '/');
@@ -10,21 +10,34 @@ interface class _HttpUtils {
 
   static (bool isMatched, Map<String, String> params) routeHasMatch(
     String requestPath,
-    String mappedRoutePath,
+    String routePath,
   ) {
-    final escapedRoutePath = RegExp.escape(mappedRoutePath);
-    final dynamicPath = RegExp(
-      escapedRoutePath.replaceAllMapped(
+    ///
+    if (requestPath.split('/').length != routePath.split('/').length) {
+      return (false, {});
+    }
+
+    final routeMatcher = RegExp(
+      routePath.replaceAllMapped(
         pathPattern,
-        (match) => pathPatternGroup,
+        (match) => pathKey,
       ),
     );
 
-    if (dynamicPath.hasMatch(requestPath)) {
-      final key = pathPattern.firstMatch(escapedRoutePath)!.group(1)!;
-      final value = dynamicPath.firstMatch(requestPath)!.group(1)!;
+    final params = <String, String>{};
 
-      return (true, {key: value});
+    if (routeMatcher.hasMatch(requestPath)) {
+      for (final match in routeMatcher.allMatches(requestPath)) {
+        ///
+        final keys = pathPattern.allMatches(routePath).toList();
+
+        ///
+        for (var g = 1; g < match.groupCount + 1; g++) {
+          params[keys[g - 1].group(1)!] = match.group(g)!;
+        }
+      }
+
+      return (true, params);
     }
 
     return (false, {});

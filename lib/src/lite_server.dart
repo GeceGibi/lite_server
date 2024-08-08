@@ -74,6 +74,7 @@ class LiteServer {
       }
 
       final normalizedPath = _HttpUtils.normalizePath(paths);
+      print(normalizedPath);
       routeMap[normalizedPath] = _HttpRouteMapper(route, services);
     }
 
