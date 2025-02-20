@@ -97,11 +97,6 @@ void main(List<String> arguments) async {
   for (var i = 0; i < 6; i++) {
     await Isolate.spawn(startServer, liteServer);
   }
-
-  // print(liteServer.routeMap.keys.join('\n'));
-  // await startServer(liteServer);
-
-  await Future<void>.delayed(const Duration(seconds: 500));
 }
 
 Future<void> startServer(LiteServer liteServer) async {
