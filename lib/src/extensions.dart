@@ -1,31 +1,37 @@
 part of 'lite_server.dart';
 
 extension HttpResponseHelpers on HttpResponse {
-  Future<void> ok(
-    Object? body, {
+  Future<void> status(
+    int code, {
+    Object? body,
     String? message,
     ContentType? contentType,
   }) async {
     headers.contentType = contentType;
-
-    if (message != null) {
-      reasonPhrase = message;
-    }
-
-    write(body);
-    await close();
-  }
-
-  Future<void> status(int code, {Object? body, String? message}) async {
     statusCode = code;
 
     if (message != null) {
       reasonPhrase = message;
     }
 
-    write(body);
+    if (body != null) {
+      write(body);
+    }
 
     await close();
+  }
+
+  Future<void> ok({
+    Object? body,
+    String? message,
+    ContentType? contentType,
+  }) async {
+    await status(
+      HttpStatus.ok,
+      body: body,
+      message: message,
+      contentType: contentType,
+    );
   }
 
   Future<void> json<T>(T data) async {
@@ -35,42 +41,27 @@ extension HttpResponseHelpers on HttpResponse {
   }
 
   Future<void> html(String data) {
-    return ok(data, contentType: ContentType.html);
+    return ok(body: data, contentType: ContentType.html);
   }
 
   Future<void> unauthorized() async {
-    statusCode = HttpStatus.unauthorized;
-    await close();
+    await status(HttpStatus.unauthorized);
   }
 
   Future<void> notFound() async {
-    statusCode = HttpStatus.notFound;
-    await close();
+    await status(HttpStatus.notFound);
   }
 
   Future<void> methodNotAllowed() async {
-    statusCode = HttpStatus.methodNotAllowed;
-    await close();
+    await status(HttpStatus.methodNotAllowed);
   }
 
   Future<void> internalServerError({String? message}) async {
-    statusCode = HttpStatus.internalServerError;
-
-    if (message != null) {
-      reasonPhrase = message;
-    }
-
-    await close();
+    await status(HttpStatus.internalServerError, message: message);
   }
 
   Future<void> badRequest([String? message]) async {
-    statusCode = HttpStatus.badRequest;
-
-    if (message != null) {
-      reasonPhrase = message;
-    }
-
-    await close();
+    await status(HttpStatus.badRequest, message: message);
   }
 
   Future<void> file(String path, {String? mimeType}) async {
@@ -78,9 +69,7 @@ extension HttpResponseHelpers on HttpResponse {
     final mime = mimeType ?? lookupMimeType(path);
 
     if (mime == null) {
-      return internalServerError(
-        message: "mime-type can't resolved.",
-      );
+      return internalServerError(message: "mime-type can't resolved.");
     }
 
     headers

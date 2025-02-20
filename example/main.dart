@@ -8,8 +8,6 @@ import 'package:lite_server/src/lite_server.dart';
 import 'routes/home.dart';
 
 void main(List<String> arguments) async {
-  // LiteServerLogger.instance.cleanLogs();
-
   final liteServer = LiteServer(
     routes: [
       homeRoute,
@@ -68,21 +66,19 @@ void main(List<String> arguments) async {
         '/post',
         handler: (request, payload) async {
           print(jsonDecode(await request.readBodyAsString()));
-          await request.response.ok('posted');
+          await request.response.ok(body: 'posted');
         },
       ),
       HttpRoute.post(
         '/upload',
         handler: (request, payload) async {
           await for (final entry in request.multipartData()) {
-            print(entry.info);
-
             if (!entry.info.containsKey('content-type')) {
               print(utf8.decode(entry.bytes));
             }
           }
 
-          await request.response.ok('uploaded');
+          await request.response.ok(body: 'uploaded');
         },
       ),
       HttpStaticRoute(
@@ -121,9 +117,7 @@ Future<void> startServer(LiteServer liteServer) async {
     server,
     controllers: [
       LoggerController(level: LogLevel.errors),
-      CorsOriginController(
-        allowedMethods: {'GET', 'POST', 'OPTIONS'},
-      ),
+      CorsOriginController(allowedMethods: {'GET', 'POST', 'OPTIONS'}),
     ],
   );
 }

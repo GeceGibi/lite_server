@@ -85,7 +85,7 @@ class HttpStaticRoute extends HttpRoute {
                 ];
 
                 request.response.ok(
-                  _getListDirectoryHtml(content),
+                  body: _getListDirectoryHtml(content),
                   contentType: ContentType.html,
                 );
                 return;
