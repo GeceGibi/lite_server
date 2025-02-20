@@ -1,3 +1,8 @@
+## 0.2.4
+- Updated dependencies.
+- Updated `response.ok()`
+
+
 ## 0.2.3
 - Fixed nested route multiple dynamic path parameter parse bug ex. `/<foo>/<bar>/<deep>/<path>/...`
 
