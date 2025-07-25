@@ -58,14 +58,21 @@ class HttpStaticRoute extends HttpRoute {
     super.controllers,
     String? defaultDocument,
     bool listDirectory = false,
+    List<String> allowedExtensions = const [],
   }) : super(
           handler: (request, payload) {
             final dir = Directory(directoryPath);
 
+            // Security check - prevent directory traversal
             var fileName = request.uri.path.substring(path.length);
-
             if (fileName.startsWith('/')) {
               fileName = fileName.substring(1);
+            }
+
+            // Prevent directory traversal attacks
+            if (fileName.contains('..') || fileName.contains('//')) {
+              request.response.forbidden();
+              return;
             }
 
             if (fileName.isEmpty) {
@@ -99,6 +106,15 @@ class HttpStaticRoute extends HttpRoute {
               return;
             }
 
+            // Check file extension if restrictions are set
+            if (allowedExtensions.isNotEmpty) {
+              final extension = fileName.split('.').last.toLowerCase();
+              if (!allowedExtensions.contains(extension)) {
+                request.response.forbidden();
+                return;
+              }
+            }
+
             final mimeType = lookupMimeType('${dir.path}/$fileName');
 
             if (mimeType == null) {
@@ -108,18 +124,25 @@ class HttpStaticRoute extends HttpRoute {
               return;
             }
 
-            final bytes = file.readAsBytesSync();
+            try {
+              final bytes = file.readAsBytesSync();
 
-            request.response.headers.contentLength = bytes.length;
-            request.response.headers.contentType = ContentType.parse(mimeType);
+              request.response.headers.contentLength = bytes.length;
+              request.response.headers.contentType =
+                  ContentType.parse(mimeType);
 
-            request.response.add(file.readAsBytesSync());
-            request.response.close();
+              request.response.add(bytes);
+              request.response.close();
+            } catch (e) {
+              request.response.internalServerError(
+                message: 'Error reading file',
+              );
+            }
           },
         );
 
   static String _getListDirectoryHtml(List<String> items) {
     final li = [for (final item in items) '<li><a href="$item">$item</a></li>'];
-    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title></head><body><ul>${li.join()}</ul></body></html>';
+    return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Directory Listing</title><style>body{font-family:Arial,sans-serif;margin:40px;background:#f5f5f5}ul{list-style:none;padding:0}li{margin:5px 0}li a{text-decoration:none;color:#0066cc;padding:8px 12px;background:white;border-radius:4px;display:inline-block;box-shadow:0 1px 3px rgba(0,0,0,0.1)}li a:hover{background:#f0f0f0}</style></head><body><h1>Directory Listing</h1><ul>${li.join()}</ul></body></html>';
   }
 }

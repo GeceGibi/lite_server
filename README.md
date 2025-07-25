@@ -6,9 +6,22 @@ Lightweight HttpServer wrapper for Dart.
 - Lightweight 
 - Dynamic Path Support `/user/<id>`
 - Nested Routes
-- Static file support
-- MultipartFile support
-- Support Custom Guard Controllers, manipulate request if need. 
+- Static file support with security features
+- MultipartFile support with security checks
+- Support Custom Guard Controllers, manipulate request if need
+- Request timeout protection
+- Request size limits
+- Directory traversal protection
+- CORS support
+- Comprehensive logging
+
+## Security Features
+- Request timeout protection (default: 30 seconds)
+- Request size limits (default: 10MB)
+- Directory traversal attack prevention
+- File extension restrictions for static routes
+- Input sanitization and validation
+- Error handling with graceful degradation
 
 ## Usage
 ```dart
@@ -19,8 +32,6 @@ void main(List<String> arguments) async {
       HttpRoute.get(
         '/',
         handler: (request, payload) {
-          // throw Exception('Error test');
-          // request.response.redirect(Uri(path: '/api/users'));
           final cwd = Directory.current.path;
           request.response.file('$cwd/assets/web/images/512.png');
         },
@@ -70,6 +81,7 @@ void main(List<String> arguments) async {
         '/images',
         directoryPath: 'assets/images/',
         listDirectory: true,
+        allowedExtensions: ['jpg', 'png', 'gif'], // Optional file restrictions
       ),
       HttpStaticRoute(
         '/web',
@@ -77,6 +89,8 @@ void main(List<String> arguments) async {
         defaultDocument: 'index.html',
       ),
     ],
+    maxRequestSize: 5 * 1024 * 1024, // 5MB limit
+    requestTimeout: Duration(seconds: 60), // 60 second timeout
   );
 
   for (var i = 0; i < 6; i++) {
@@ -102,8 +116,31 @@ Future<void> startServer(LiteServer liteServer) async {
       LoggerController(level: LogLevel.errors),
       CorsOriginController(
         allowedMethods: {'GET', 'POST', 'OPTIONS'},
+        allowedOrigins: {'http://localhost:3000', 'https://yourdomain.com'},
       ),
     ],
   );
 }
-```
+
+## Configuration Options
+
+### LiteServer Constructor
+- `maxRequestSize`: Maximum request size in bytes (default: 10MB)
+- `requestTimeout`: Request timeout duration (default: 30 seconds)
+
+### HttpStaticRoute
+- `allowedExtensions`: List of allowed file extensions for security
+- `listDirectory`: Enable directory listing
+- `defaultDocument`: Default document to serve
+
+### LoggerController
+- `level`: Logging level (all, errors, requests, none)
+- `path`: Log directory path
+
+### CorsOriginController
+- `allowedOrigins`: Set of allowed origins
+- `allowedMethods`: Set of allowed HTTP methods
+- `allowedHeaders`: Set of allowed headers
+- `maxAge`: CORS cache duration
+- `allowCredentials`: Allow credentials
+- `exposeHeaders`: Headers to expose

@@ -48,6 +48,10 @@ extension HttpResponseHelpers on HttpResponse {
     await status(HttpStatus.unauthorized);
   }
 
+  Future<void> forbidden() async {
+    await status(HttpStatus.forbidden);
+  }
+
   Future<void> notFound() async {
     await status(HttpStatus.notFound);
   }
@@ -107,6 +111,11 @@ extension HttpRequestHelpers on HttpRequest {
       throw Exception('Boundary not found');
     }
 
+    // Security check for boundary length
+    if (boundary.length > 70) {
+      throw Exception('Boundary too long');
+    }
+
     final transformer = MimeMultipartTransformer(boundary);
     final parts = await transform<MimeMultipart>(transformer.cast()).toList();
 
@@ -129,6 +138,11 @@ extension HttpRequestHelpers on HttpRequest {
     final pattern = RegExp('"(.+)"');
 
     if (contentDisposition == null) {
+      return output;
+    }
+
+    // Security check for content disposition length
+    if (contentDisposition.length > 1000) {
       return output;
     }
 

@@ -51,20 +51,30 @@ class LiteServerLogger {
   static RandomAccessFile? fileErrors;
 
   void _checkFilesAndCreate() {
-    if (!logFileRequests.existsSync()) {
-      logFileRequests.createSync(recursive: true);
-    }
+    try {
+      if (!logFileRequests.existsSync()) {
+        logFileRequests.createSync(recursive: true);
+      }
 
-    if (!logFileErrors.existsSync()) {
-      logFileErrors.createSync(recursive: true);
-    }
+      if (!logFileErrors.existsSync()) {
+        logFileErrors.createSync(recursive: true);
+      }
 
-    fileRequests = logFileRequests.openSync(mode: FileMode.append);
-    fileErrors = logFileErrors.openSync(mode: FileMode.append);
+      fileRequests = logFileRequests.openSync(mode: FileMode.append);
+      fileErrors = logFileErrors.openSync(mode: FileMode.append);
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error creating log files: $e');
+    }
   }
 
   void cleanLogs() {
-    directory.deleteSync(recursive: true);
+    try {
+      directory.deleteSync(recursive: true);
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error cleaning logs: $e');
+    }
   }
 
   String _clean(String line) {
@@ -81,15 +91,25 @@ class LiteServerLogger {
   }
 
   void appendErrorLine(String line) {
-    fileErrors
-      ?..writeStringSync('${_clean(line)}\n')
-      ..flushSync();
+    try {
+      fileErrors
+        ?..writeStringSync('${_clean(line)}\n')
+        ..flushSync();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error writing to error log: $e');
+    }
   }
 
   void appendRequestLine(String line) {
-    fileRequests
-      ?..writeStringSync('${_clean(line)}\n')
-      ..flushSync();
+    try {
+      fileRequests
+        ?..writeStringSync('${_clean(line)}\n')
+        ..flushSync();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error writing to request log: $e');
+    }
   }
 }
 
@@ -123,6 +143,7 @@ class LoggerController extends HttpController {
         request.method,
         request.response.statusCode,
         request.uri,
+        request.headers['user-agent'] ?? 'Unknown',
       ].join(' | ');
 
       // ignore: avoid_print
@@ -131,6 +152,9 @@ class LoggerController extends HttpController {
       if (level case LogLevel.requests || LogLevel.all) {
         logger.appendRequestLine(line);
       }
+    }).catchError((Object error) {
+      // ignore: avoid_print
+      print('Error in request logging: $error');
     });
 
     return HttpControllerBehavior.next();

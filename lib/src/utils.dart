@@ -12,13 +12,30 @@ interface class _HttpUtils {
     String requestPath,
     String routePath,
   ) {
-    ///
-    if (requestPath.split('/').length != routePath.split('/').length) {
+    // Sanitize inputs
+    if (requestPath.isEmpty || routePath.isEmpty) {
       return (false, {});
     }
 
+    // Normalize paths
+    final normalizedRequestPath =
+        requestPath.startsWith('/') ? requestPath : '/$requestPath';
+    final normalizedRoutePath =
+        routePath.startsWith('/') ? routePath : '/$routePath';
+
+    ///
+    if (normalizedRequestPath.split('/').length !=
+        normalizedRoutePath.split('/').length) {
+      return (false, {});
+    }
+
+    // Check if route has dynamic parameters
+    if (!pathPattern.hasMatch(normalizedRoutePath)) {
+      return (normalizedRequestPath == normalizedRoutePath, {});
+    }
+
     final routeMatcher = RegExp(
-      routePath.replaceAllMapped(
+      normalizedRoutePath.replaceAllMapped(
         pathPattern,
         (match) => pathKey,
       ),
@@ -26,14 +43,18 @@ interface class _HttpUtils {
 
     final params = <String, String>{};
 
-    if (routeMatcher.hasMatch(requestPath)) {
-      for (final match in routeMatcher.allMatches(requestPath)) {
+    if (routeMatcher.hasMatch(normalizedRequestPath)) {
+      for (final match in routeMatcher.allMatches(normalizedRequestPath)) {
         ///
-        final keys = pathPattern.allMatches(routePath).toList();
+        final keys = pathPattern.allMatches(normalizedRoutePath).toList();
 
         ///
         for (var g = 1; g < match.groupCount + 1; g++) {
-          params[keys[g - 1].group(1)!] = match.group(g)!;
+          final key = keys[g - 1].group(1);
+          final value = match.group(g);
+          if (key != null && value != null) {
+            params[key] = value;
+          }
         }
       }
 

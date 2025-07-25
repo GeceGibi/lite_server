@@ -11,7 +11,13 @@ part 'extensions.dart';
 part 'models.dart';
 
 class LiteServer {
-  LiteServer({this.routes = const [], this.onRouteNotFound, this.onError}) {
+  LiteServer({
+    this.routes = const [],
+    this.onRouteNotFound,
+    this.onError,
+    this.maxRequestSize = 10 * 1024 * 1024, // 10MB default
+    this.requestTimeout = const Duration(seconds: 30),
+  }) {
     generateRouteMap();
   }
 
@@ -22,6 +28,8 @@ class LiteServer {
     Object? error,
     StackTrace stackTrace,
   )? onError;
+  final int maxRequestSize;
+  final Duration requestTimeout;
 
   ///
   List<HttpController> controllers = [];
@@ -29,16 +37,22 @@ class LiteServer {
   void listen(
     HttpServer server, {
     List<HttpController> controllers = const [],
-    // void Function(HttpRequest request)? onRouteNotFound,
     void Function(HttpRequest request, Object? error, StackTrace stackTrace)?
         onError,
   }) {
     this.controllers = controllers;
-    server.asBroadcastStream().listen(requestHandler, cancelOnError: false);
+    server.asBroadcastStream().listen(
+      requestHandler,
+      cancelOnError: false,
+      onError: (Object error, StackTrace stack) {
+        // ignore: avoid_print
+        print('Server error: $error');
+      },
+    );
 
     // ignore: avoid_print
     print(
-      'LiteServer running on(${server.address.address}:${server.port})',
+      'LiteServer running on ${server.address.address}:${server.port}',
     );
   }
 
@@ -74,7 +88,6 @@ class LiteServer {
       }
 
       final normalizedPath = _HttpUtils.normalizePath(paths);
-      print(normalizedPath);
       routeMap[normalizedPath] = _HttpRouteMapper(route, services);
     }
 
@@ -91,6 +104,13 @@ class LiteServer {
     String method,
     List<HttpRoute>? searchRoutes,
   ) {
+    // Optimize route matching with exact match first
+    final exactMatch = routeMap[requestPath];
+    if (exactMatch != null) {
+      return (exactMatch, {});
+    }
+
+    // Then check dynamic routes
     for (final entry in routeMap.entries) {
       ///! Static file path
       if (entry.value.route is HttpStaticRoute) {
@@ -109,11 +129,6 @@ class LiteServer {
         if (isMatched) {
           return (entry.value, params);
         }
-      }
-
-      ///! Not dynamic paths
-      else if (entry.key == requestPath) {
-        return (entry.value, {});
       }
     }
 
@@ -135,7 +150,27 @@ class LiteServer {
       StackTrace stackTrace,
     )>[];
 
+    // Set request timeout
+    final timeoutTimer = Timer(requestTimeout, () {
+      try {
+        request.response.statusCode = HttpStatus.requestTimeout;
+        request.response.close();
+      } catch (e) {
+        // Response already closed
+      }
+    });
+
     try {
+      // Check request size
+      final contentLength = request.headers.contentLength;
+      if (contentLength != null && contentLength > maxRequestSize) {
+        await request.response.status(
+          HttpStatus.requestEntityTooLarge,
+          message: 'Request too large',
+        );
+        return;
+      }
+
       final extras = <String, Object?>{};
 
       /// Check Global services
@@ -144,6 +179,7 @@ class LiteServer {
         final behavior = await controller.onRequest(request);
 
         if (!behavior.next) {
+          timeoutTimer.cancel();
           return;
         }
 
@@ -157,16 +193,19 @@ class LiteServer {
       if (routeMapper == null) {
         if (onRouteNotFound != null) {
           onRouteNotFound!(request);
+          timeoutTimer.cancel();
           return;
         }
 
         await request.response.notFound();
+        timeoutTimer.cancel();
         return;
       }
 
       ///! check methods is allowed for route
       else if (!routeMapper.route.methods.contains(request.method)) {
         await request.response.methodNotAllowed();
+        timeoutTimer.cancel();
         return;
       }
 
@@ -175,6 +214,7 @@ class LiteServer {
         final behavior = await controller.onRequest(request);
 
         if (!behavior.next) {
+          timeoutTimer.cancel();
           return;
         }
 
@@ -187,15 +227,28 @@ class LiteServer {
       );
 
       await routeMapper.route.handler!(request, payload);
+      timeoutTimer.cancel();
     } catch (error, stack) {
+      timeoutTimer.cancel();
+
       /// Call services
       for (final callback in errorListeners) {
-        callback(request, error, stack);
+        try {
+          callback(request, error, stack);
+        } catch (e) {
+          // ignore: avoid_print
+          print('Error in error listener: $e');
+        }
       }
 
       ///
       if (onError != null) {
-        onError!(request, error, stack);
+        try {
+          onError!(request, error, stack);
+        } catch (e) {
+          // ignore: avoid_print
+          print('Error in global error handler: $e');
+        }
         return;
       }
 
