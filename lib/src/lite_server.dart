@@ -163,7 +163,8 @@ class LiteServer {
     try {
       // Check request size
       final contentLength = request.headers.contentLength;
-      if (contentLength != null && contentLength > maxRequestSize) {
+
+      if (contentLength > maxRequestSize) {
         await request.response.status(
           HttpStatus.requestEntityTooLarge,
           message: 'Request too large',
