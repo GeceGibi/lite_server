@@ -1,9 +1,9 @@
-import 'dart:async';
-import 'dart:convert';
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 import 'dart:isolate';
+
 import 'package:lite_server/lite_server.dart';
-import 'package:lite_server/src/lite_server.dart';
 
 import 'routes/home.dart';
 
@@ -12,79 +12,65 @@ void main(List<String> arguments) async {
     routes: [
       homeRoute,
       HttpRoute.get(
-        '/',
-        handler: (request, payload) {
-          // throw Exception('Error test');
-          // // request.response.redirect(Uri(path: '/api/users'));
-          final cwd = Directory.current.path;
-          request.response.file('$cwd/assets/web/images/512.png');
-        },
+        '/api',
         routes: [
           HttpRoute.get(
-            'api',
-            routes: [
-              HttpRoute.get(
-                'users',
-                handler: (request, payload) {
-                  request.response.json(<Object>[]);
-                },
-              ),
-            ],
+            'users',
+            handler: (request, payload) => request.response.json(<Object>[]),
           ),
         ],
-      ),
-      HttpRoute.post(
-        '/user/<id>',
-        handler: (request, payload) async {
-          print(jsonDecode(await request.readBodyAsString()));
-          await request.response.json(payload.pathParameters);
-        },
       ),
       HttpRoute.get(
         '/user/<id>',
-        handler: (request, payload) async {
-          await request.response.json(payload.pathParameters);
-        },
+        handler: (request, payload) =>
+            request.response.json(payload.pathParameters),
         routes: [
           HttpRoute.get(
             '<pack>',
-            handler: (request, payload) async {
-              await request.response.json(payload.pathParameters);
-            },
+            handler: (request, payload) =>
+                request.response.json(payload.pathParameters),
             routes: [
               HttpRoute.get(
                 '<dept>',
-                handler: (request, payload) async {
-                  await request.response.json(payload.pathParameters);
-                },
+                handler: (request, payload) =>
+                    request.response.json(payload.pathParameters),
               ),
             ],
           ),
         ],
       ),
       HttpRoute.post(
-        '/post',
+        '/user/<id>',
         handler: (request, payload) async {
-          print(jsonDecode(await request.readBodyAsString()));
-          await request.response.ok(body: 'posted');
+          final body = await request.readBodyAsJson<Map<String, Object?>>();
+
+          await request.response.json({
+            'id': payload.parameter('id'),
+            'body': body,
+          });
         },
       ),
       HttpRoute.post(
         '/upload',
         handler: (request, payload) async {
-          await for (final entry in request.multipartData()) {
-            if (!entry.info.containsKey('content-type')) {
-              print(utf8.decode(entry.bytes));
-            }
+          final received = <String>[];
+
+          await for (final part in request.multipartData()) {
+            received.add(
+              part.isFile
+                  ? '${part.filename} (${part.bytes.length} bytes)'
+                  : '${part.name}=${part.text()}',
+            );
           }
 
-          await request.response.ok(body: 'uploaded');
+          await request.response.json(received);
         },
       ),
       HttpStaticRoute(
         '/images',
         directoryPath: 'assets/images/',
         listDirectory: true,
+        allowedExtensions: {'jpg', 'png', 'gif'},
       ),
       HttpStaticRoute(
         '/web',
@@ -92,11 +78,17 @@ void main(List<String> arguments) async {
         defaultDocument: 'index.html',
       ),
     ],
+    maxRequestSize: 5 * 1024 * 1024,
+    requestTimeout: const Duration(seconds: 60),
   );
 
-  for (var i = 0; i < 6; i++) {
+  print(liteServer.routeMap.keys.join('\n'));
+
+  for (var i = 0; i < 5; i++) {
     await Isolate.spawn(startServer, liteServer);
   }
+
+  await startServer(liteServer);
 }
 
 Future<void> startServer(LiteServer liteServer) async {
@@ -112,7 +104,10 @@ Future<void> startServer(LiteServer liteServer) async {
     server,
     controllers: [
       LoggerController(level: LogLevel.errors),
-      CorsOriginController(allowedMethods: {'GET', 'POST', 'OPTIONS'}),
+      CorsOriginController(
+        allowedMethods: {'GET', 'POST', 'OPTIONS'},
+        allowedOrigins: {'http://localhost:3000'},
+      ),
     ],
   );
 }

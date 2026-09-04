@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:mime/mime.dart';
 
@@ -15,156 +16,256 @@ class LiteServer {
     this.routes = const [],
     this.onRouteNotFound,
     this.onError,
-    this.maxRequestSize = 10 * 1024 * 1024, // 10MB default
+    this.maxRequestSize = defaultMaxRequestSize,
     this.requestTimeout = const Duration(seconds: 30),
   }) {
     generateRouteMap();
   }
 
+  /// Default ceiling for request bodies, 10MB.
+  static const int defaultMaxRequestSize = 10 * 1024 * 1024;
+
   final List<HttpRoute> routes;
-  final void Function(HttpRequest request)? onRouteNotFound;
+  final FutureOr<void> Function(HttpRequest request)? onRouteNotFound;
   final void Function(
     HttpRequest request,
     Object? error,
     StackTrace stackTrace,
   )? onError;
+
+  /// Maximum number of body bytes accepted per request. Enforced both from
+  /// `Content-Length` and while the body is being read, so a chunked upload
+  /// without a declared length cannot slip past it.
   final int maxRequestSize;
+
+  /// How long a request may take before it is answered with `408`.
   final Duration requestTimeout;
 
-  ///
+  /// Controllers passed to the most recent [listen] call.
   List<HttpController> controllers = [];
 
-  void listen(
+  /// Absolute route path to every route registered for that path.
+  ///
+  /// A path may hold more than one route as long as their methods do not
+  /// overlap, which is what makes `GET /user/<id>` and `POST /user/<id>`
+  /// coexist.
+  final routeMap = <String, List<_HttpRouteMapper>>{};
+
+  /// Paths without placeholders, matched with a map lookup.
+  final _literalRoutes = <String, List<_HttpRouteMapper>>{};
+
+  /// Paths with `<parameter>` placeholders, matched against their pattern.
+  final _dynamicRoutes = <_HttpRouteMapper>[];
+
+  /// [HttpStaticRoute] mount points, matched by path prefix.
+  final _staticFileRoutes = <_HttpRouteMapper>[];
+
+  /// Starts handling requests from [server].
+  ///
+  /// The returned subscription lets the caller stop serving without closing
+  /// [server] itself.
+  StreamSubscription<HttpRequest> listen(
     HttpServer server, {
     List<HttpController> controllers = const [],
     void Function(HttpRequest request, Object? error, StackTrace stackTrace)?
         onError,
+    bool logStartup = true,
   }) {
     this.controllers = controllers;
-    server.asBroadcastStream().listen(
-      requestHandler,
+
+    final subscription = server.listen(
+      (request) => _handle(request, controllers, onError).ignore(),
       cancelOnError: false,
-      onError: (Object error, StackTrace stack) {
+      onError: (Object error, StackTrace stackTrace) {
         // ignore: avoid_print
-        print('Server error: $error');
+        print('LiteServer socket error: $error');
       },
     );
 
-    // ignore: avoid_print
-    print(
-      'LiteServer running on ${server.address.address}:${server.port}',
-    );
+    if (logStartup) {
+      // ignore: avoid_print
+      print('LiteServer running on ${server.address.address}:${server.port}');
+    }
+
+    return subscription;
   }
 
+  /// Rebuilds the route table from [routes].
   ///
-  final routeMap = <String, _HttpRouteMapper>{};
+  /// Throws an [ArgumentError] when a path is nested incorrectly or when two
+  /// routes claim the same path and method.
+  void generateRouteMap() {
+    routeMap.clear();
+    _literalRoutes.clear();
+    _dynamicRoutes.clear();
+    _staticFileRoutes.clear();
 
-  (List<String>, List<HttpController>) _genRouteMap(
+    _collectRoutes(routes, const [], const []);
+
+    // Longest mount first so `/images/thumbs` wins over `/images`.
+    _staticFileRoutes.sort((a, b) => b.path.length.compareTo(a.path.length));
+  }
+
+  void _collectRoutes(
     List<HttpRoute> routes,
     List<HttpController> parentControllers,
     List<String> parentPaths,
   ) {
     for (final route in routes) {
       if (parentPaths.isNotEmpty && route.path.startsWith('/')) {
-        throw Exception(
-          'Sub routes path can\'t starts with "/", -> ${route.path}',
+        throw ArgumentError.value(
+          route.path,
+          'path',
+          'sub route paths must not start with "/"',
         );
       }
 
       if (parentPaths.isEmpty && !route.path.startsWith('/')) {
-        throw Exception(
-          'Main routes path must starts with "/", -> ${route.path}',
+        throw ArgumentError.value(
+          route.path,
+          'path',
+          'top level route paths must start with "/"',
         );
       }
 
-      final (paths, services) = _genRouteMap(
-        route.routes ?? [],
-        [...parentControllers, ...?route.controllers],
-        [...parentPaths, route.path],
-      );
+      final paths = [...parentPaths, route.path];
+      final controllers = [...parentControllers, ...?route.controllers];
 
+      _collectRoutes(route.routes ?? const [], controllers, paths);
+
+      /// A route without a handler only groups its children.
       if (route.handler == null) {
         continue;
       }
 
-      final normalizedPath = _HttpUtils.normalizePath(paths);
-      routeMap[normalizedPath] = _HttpRouteMapper(route, services);
+      _register(
+        _HttpRouteMapper(route, controllers, _HttpUtils.normalizePath(paths)),
+      );
     }
-
-    return (parentPaths, parentControllers);
   }
 
-  void generateRouteMap() {
-    routeMap.clear();
-    _genRouteMap(routes, [], []);
-  }
+  void _register(_HttpRouteMapper mapper) {
+    final siblings = routeMap.putIfAbsent(mapper.path, () => []);
 
-  (_HttpRouteMapper?, Map<String, String>) _findRoute(
-    String requestPath,
-    String method,
-    List<HttpRoute>? searchRoutes,
-  ) {
-    // Optimize route matching with exact match first
-    final exactMatch = routeMap[requestPath];
-    if (exactMatch != null) {
-      return (exactMatch, {});
-    }
+    for (final sibling in siblings) {
+      final overlap = sibling.methods.intersection(mapper.methods);
 
-    // Then check dynamic routes
-    for (final entry in routeMap.entries) {
-      ///! Static file path
-      if (entry.value.route is HttpStaticRoute) {
-        if (requestPath.startsWith(entry.key)) {
-          return (entry.value, {});
-        }
-      }
-
-      ///! Dynamic paths
-      else if (_HttpUtils.pathPattern.hasMatch(entry.key)) {
-        final (isMatched, params) = _HttpUtils.routeHasMatch(
-          requestPath,
-          entry.key,
+      if (overlap.isNotEmpty) {
+        throw ArgumentError.value(
+          mapper.path,
+          'routes',
+          'duplicate route for ${overlap.join(', ')}',
         );
-
-        if (isMatched) {
-          return (entry.value, params);
-        }
       }
     }
 
-    return (null, {});
+    siblings.add(mapper);
+
+    if (mapper.isStaticFileRoute) {
+      _staticFileRoutes.add(mapper);
+    } else if (mapper.isDynamic) {
+      _dynamicRoutes.add(mapper);
+    } else {
+      (_literalRoutes[mapper.path] ??= []).add(mapper);
+    }
   }
 
+  /// Resolves [request] to the route that should handle it.
   (_HttpRouteMapper?, Map<String, String>) findRoute(HttpRequest request) {
-    return _findRoute(
-      request.uri.path,
-      request.method,
-      routes,
-    );
+    final resolution = _resolve(request.uri.path, request.method);
+    return (resolution.mapper, resolution.pathParameters);
   }
 
-  Future<void> requestHandler(HttpRequest request) async {
+  /// Matches literal paths first, then paths with placeholders, then static
+  /// file mounts, so a concrete route always wins over a broader one.
+  _RouteResolution _resolve(String requestPath, String method) {
+    final path = _HttpUtils.normalizeRequestPath(requestPath);
+    final allowedMethods = <String>{};
+
+    for (final mapper in _literalRoutes[path] ?? const <_HttpRouteMapper>[]) {
+      if (mapper.methods.contains(method)) {
+        return _RouteResolution(mapper: mapper);
+      }
+
+      allowedMethods.addAll(mapper.methods);
+    }
+
+    for (final mapper in _dynamicRoutes) {
+      final params = _HttpUtils.matchParams(
+        mapper.pattern!,
+        mapper.parameterNames,
+        path,
+      );
+
+      if (params == null) {
+        continue;
+      }
+
+      if (mapper.methods.contains(method)) {
+        return _RouteResolution(mapper: mapper, pathParameters: params);
+      }
+
+      allowedMethods.addAll(mapper.methods);
+    }
+
+    for (final mapper in _staticFileRoutes) {
+      if (!_isUnderMount(path, mapper.path)) {
+        continue;
+      }
+
+      if (mapper.methods.contains(method)) {
+        return _RouteResolution(mapper: mapper);
+      }
+
+      allowedMethods.addAll(mapper.methods);
+    }
+
+    return _RouteResolution(allowedMethods: allowedMethods);
+  }
+
+  static bool _isUnderMount(String path, String mountPath) {
+    if (mountPath == '/') {
+      return true;
+    }
+
+    return path == mountPath || path.startsWith('$mountPath/');
+  }
+
+  Future<void> requestHandler(HttpRequest request) {
+    return _handle(request, controllers);
+  }
+
+  Future<void> _handle(
+    HttpRequest request,
+    List<HttpController> globalControllers, [
+    void Function(HttpRequest request, Object? error, StackTrace stackTrace)?
+        listenOnError,
+  ]) async {
     final errorListeners = <void Function(
       HttpRequest request,
       Object? error,
       StackTrace stackTrace,
     )>[];
 
-    // Set request timeout
+    var timedOut = false;
+
     final timeoutTimer = Timer(requestTimeout, () {
+      timedOut = true;
+
       try {
         request.response.statusCode = HttpStatus.requestTimeout;
-        request.response.close();
-      } catch (e) {
-        // Response already closed
+        request.response.close().ignore();
+      } catch (_) {
+        // The response was already committed, nothing left to send.
       }
     });
 
-    try {
-      // Check request size
-      final contentLength = request.headers.contentLength;
+    /// Published so the body helpers can enforce the same ceiling while they
+    /// read, without every handler having to pass it around.
+    _maxBodySizes[request] = maxRequestSize;
 
-      if (contentLength > maxRequestSize) {
+    try {
+      if (request.headers.contentLength > maxRequestSize) {
         await request.response.status(
           HttpStatus.requestEntityTooLarge,
           message: 'Request too large',
@@ -174,78 +275,76 @@ class LiteServer {
 
       final extras = <String, Object?>{};
 
-      /// Check Global services
-      for (final controller in controllers) {
+      /// Global controllers run for every request, matched or not.
+      for (final controller in globalControllers) {
         errorListeners.add(controller.onError);
         final behavior = await controller.onRequest(request);
 
         if (!behavior.next) {
-          timeoutTimer.cancel();
           return;
         }
 
         extras.addAll(behavior.extra);
       }
 
-      /// Find route if request is not cut off from services
-      final (routeMapper, pathParameters) = findRoute(request);
+      final resolution = _resolve(request.uri.path, request.method);
+      final mapper = resolution.mapper;
 
-      ///! Check route is founded
-      if (routeMapper == null) {
+      if (mapper == null) {
+        ///! The path exists but not for this method.
+        if (resolution.allowedMethods.isNotEmpty) {
+          request.response.headers.set(
+            HttpHeaders.allowHeader,
+            resolution.allowedMethods.join(', '),
+          );
+
+          await request.response.methodNotAllowed();
+          return;
+        }
+
         if (onRouteNotFound != null) {
-          onRouteNotFound!(request);
-          timeoutTimer.cancel();
+          await onRouteNotFound!(request);
           return;
         }
 
         await request.response.notFound();
-        timeoutTimer.cancel();
         return;
       }
 
-      ///! check methods is allowed for route
-      else if (!routeMapper.route.methods.contains(request.method)) {
-        await request.response.methodNotAllowed();
-        timeoutTimer.cancel();
-        return;
-      }
-
-      for (final controller in routeMapper.controllers) {
+      for (final controller in mapper.controllers) {
         errorListeners.add(controller.onError);
         final behavior = await controller.onRequest(request);
 
         if (!behavior.next) {
-          timeoutTimer.cancel();
           return;
         }
 
         extras.addAll(behavior.extra);
       }
 
-      final payload = HttpRoutePayload(
-        extras: extras,
-        pathParameters: pathParameters,
+      await mapper.route.handler!(
+        request,
+        HttpRoutePayload(
+          path: mapper.path,
+          extras: extras,
+          pathParameters: resolution.pathParameters,
+        ),
       );
-
-      await routeMapper.route.handler!(request, payload);
-      timeoutTimer.cancel();
-    } catch (error, stack) {
-      timeoutTimer.cancel();
-
-      /// Call services
+    } catch (error, stackTrace) {
       for (final callback in errorListeners) {
         try {
-          callback(request, error, stack);
+          callback(request, error, stackTrace);
         } catch (e) {
           // ignore: avoid_print
           print('Error in error listener: $e');
         }
       }
 
-      ///
-      if (onError != null) {
+      final handler = onError ?? listenOnError;
+
+      if (handler != null) {
         try {
-          onError!(request, error, stack);
+          handler(request, error, stackTrace);
         } catch (e) {
           // ignore: avoid_print
           print('Error in global error handler: $e');
@@ -253,7 +352,39 @@ class LiteServer {
         return;
       }
 
-      await request.response.internalServerError();
+      /// The timeout already answered this request.
+      if (timedOut) {
+        return;
+      }
+
+      if (error is HttpRequestTooLargeException) {
+        await _respondQuietly(
+          request,
+          HttpStatus.requestEntityTooLarge,
+          'Request too large',
+        );
+        return;
+      }
+
+      await _respondQuietly(request, HttpStatus.internalServerError, null);
+    } finally {
+      timeoutTimer.cancel();
+      _maxBodySizes[request] = null;
+    }
+  }
+
+  /// Sends [statusCode], swallowing the failure when the response is already
+  /// committed or the client is gone. Without this the error path itself would
+  /// throw and surface as an unhandled asynchronous error.
+  static Future<void> _respondQuietly(
+    HttpRequest request,
+    int statusCode,
+    String? message,
+  ) async {
+    try {
+      await request.response.status(statusCode, message: message);
+    } catch (_) {
+      // Nothing can be delivered anymore.
     }
   }
 }

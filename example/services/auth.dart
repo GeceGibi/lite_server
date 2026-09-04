@@ -3,17 +3,20 @@ import 'dart:io';
 
 import 'package:lite_server/lite_server.dart';
 
-class AuthService extends HttpController {
+/// Passes every request through, publishing a value the handler can read from
+/// [HttpRoutePayload.extras].
+class AuthController extends HttpController {
   @override
   FutureOr<HttpControllerBehavior> onRequest(HttpRequest request) {
-    return HttpControllerBehavior.next(extra: {'auth': 1});
+    return const HttpControllerBehavior.next(extra: {'auth': 1});
   }
 }
 
-class IpCheckService extends HttpController {
+/// Cuts the request off before it reaches the handler.
+class IpCheckController extends HttpController {
   @override
-  FutureOr<HttpControllerBehavior> onRequest(HttpRequest request) {
-    request.response.unauthorized();
-    return HttpControllerBehavior.revoke();
+  FutureOr<HttpControllerBehavior> onRequest(HttpRequest request) async {
+    await request.response.unauthorized(message: 'Blocked address');
+    return const HttpControllerBehavior.revoke();
   }
 }

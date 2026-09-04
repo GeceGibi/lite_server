@@ -1,5 +1,86 @@
 # Changelog
 
+## [0.4.0] - 2026-09-04
+
+### Fixed
+
+- Routes are now keyed by path *and* method. `GET /user/<id>` and
+  `POST /user/<id>` used to overwrite each other in the route map, leaving one
+  of them unreachable behind a `405`.
+- The request size limit is enforced while the body is read. A chunked request
+  without a `Content-Length` previously bypassed it completely.
+- Path parameters accept and decode percent encoded values, so
+  `/user/John%20Doe` matches `/user/<id>` and yields `John Doe`.
+- Literal characters in a route path are escaped, so `/report.json` no longer
+  matches `/reportxjson`.
+- A path parameter can no longer capture across `/`.
+- The request timeout timer is always cancelled. Returning early on an
+  oversized request used to leak a timer that fired 30 seconds later.
+- An error raised after the response was closed no longer produces an
+  unhandled asynchronous error while trying to send a `500`.
+- `onError` passed to `listen` was accepted and then ignored; it is now used as
+  a fallback error handler.
+- Static routes matched any path with the mount as a prefix, so `/imagesEVIL`
+  resolved to the `/images` mount. Only the mount itself and paths below it
+  match now.
+- Static routes nested under a parent route stripped the wrong prefix and could
+  never find their files.
+- Directory listings escape file names, closing an HTML injection hole, and
+  hide dotfiles such as `.env`.
+- `Access-Control-Allow-Origin` carries a single origin instead of the whole
+  allow list, and is never sent as `*` together with
+  `Access-Control-Allow-Credentials: true`. Responses that vary by origin now
+  send `Vary: Origin`.
+- Response messages are stripped of control characters, so a message can no
+  longer inject headers into the status line.
+- `status()` keeps a content type set earlier instead of clearing it.
+- `LiteServerLogger` used static file handles, so two loggers wrote to one
+  file. Handles are per instance now and are rolled over daily instead of
+  being pinned to the day the server started.
+- `LoggerController` no longer creates a log directory when nothing will be
+  written to it.
+- Multipart parts are collected through a `BytesBuilder` instead of being
+  rebuilt per chunk, removing quadratic cost on large uploads, and parts are
+  streamed as they arrive.
+- `content-disposition` values split on their first `=` only, so a file name
+  containing `=` survives.
+- `isMultipart` checks the media type instead of only looking for a boundary.
+- An unknown MIME type serves as `application/octet-stream` rather than
+  failing with a `500`.
+- `analysis_options.yaml` disabled lints through a rule map, which replaced the
+  included rule set instead of merging with it. Disables moved to
+  `analyzer: errors:`.
+
+### Added
+
+- `HttpRoute.put`, `.patch`, `.delete`, `.head` and `.options`
+- `HttpRoutePayload.path`, `.parameter()` and `.extra<T>()`
+- `readBodyAsBytes()`, `readBodyAsJson<T>()`
+- `HttpMultiPartData.name`, `.filename`, `.contentType`, `.isFile` and `.text()`
+- `response.text()`, and an optional `message` on the error helpers
+- `HttpRequestTooLargeException` and `HttpMultipartException`
+- `LoggerController.printLogs` and `LiteServerLogger.close()`
+- `405` responses carry an `Allow` header
+- Static routes answer `HEAD`, send `Last-Modified` and honour
+  `If-Modified-Since`
+- A test suite covering routing, request handling, static file security, CORS,
+  logging and multipart parsing
+
+### Changed
+
+- Files are streamed instead of being read into memory, both by
+  `response.file()` and by static routes.
+- Route patterns are compiled once at startup rather than rebuilt per request.
+- `listen` returns its `StreamSubscription` and takes `logStartup`.
+- Method matching is case insensitive.
+- Trailing slashes are ignored when matching.
+- A `message` without a `body` is written as the response body.
+- Path parameters must be non-empty, so `/user/` no longer matches
+  `/user/<id>`.
+- Invalid route configuration throws `ArgumentError` instead of `Exception`,
+  and a duplicate path and method pair is now rejected.
+- Static routes serve `GET` and `HEAD` by default.
+
 ## [0.3.0] - 2024-12-19
 
 - Add request timeout protection (30s default)

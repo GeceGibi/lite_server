@@ -1,41 +1,43 @@
 include: package:very_good_analysis/analysis_options.yaml
 
-linter:
-  rules:
-    prefer_const_constructors: true
-    prefer_const_literals_to_create_immutables: true
-    prefer_const_declarations: true
-    avoid_print: true
-    avoid_empty_else: true
-    avoid_unnecessary_containers: true
-    prefer_single_quotes: true
-    sort_child_properties_last: true
-    always_use_package_imports: true
-    cancel_subscriptions: true
-    close_sinks: true
-    comment_references: true
-    one_member_abstracts: true
-    only_throw_errors: true
-    prefer_final_fields: true
-    prefer_final_locals: true
-    prefer_initializing_formals: true
-    slash_for_doc_comments: true
-    type_init_formals: true
-    unawaited_futures: true
-    unnecessary_const: true
-    unnecessary_new: true
-    unnecessary_this: true
-    use_rethrow_when_possible: true
-    valid_regexps: true
-    # Disable some strict rules for this library
-    public_member_api_docs: false
-    avoid_catches_without_on_clauses: false
-    document_ignores: false
-    parameter_assignments: false
-
 analyzer:
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+  # Suppressing through `analyzer: errors:` instead of `linter: rules: {x:
+  # false}`: a map of rules replaces the included list rather than merging with
+  # it, so the disables there were silently dropping the whole rule set.
   errors:
     invalid_annotation_target: ignore
+    public_member_api_docs: ignore
+    # Request handling catches everything on purpose so a single bad handler
+    # cannot take the server down.
+    avoid_catches_without_on_clauses: ignore
+    document_ignores: ignore
+    parameter_assignments: ignore
+
+linter:
+  rules:
+    - always_use_package_imports
+    - avoid_empty_else
+    - avoid_print
+    - cancel_subscriptions
+    - close_sinks
+    - comment_references
+    - one_member_abstracts
+    - only_throw_errors
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+    - prefer_final_fields
+    - prefer_final_locals
+    - prefer_initializing_formals
+    - prefer_single_quotes
+    - slash_for_doc_comments
+    - type_init_formals
+    - unawaited_futures
+    - unnecessary_const
+    - unnecessary_new
+    - unnecessary_this
+    - use_rethrow_when_possible
+    - valid_regexps

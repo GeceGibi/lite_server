@@ -1,5 +1,3 @@
-// ignore_for_file: constant_identifier_names
-
 part of 'lite_server.dart';
 
 /// Common requests handler before request accessed target route.
@@ -12,12 +10,12 @@ abstract class HttpController {
 class HttpControllerBehavior {
   /// Revoke request and cut it off
   /// Must handle request before call this
-  HttpControllerBehavior.revoke()
+  const HttpControllerBehavior.revoke()
       : next = false,
         extra = const {};
 
   /// Just move next
-  HttpControllerBehavior.next({
+  const HttpControllerBehavior.next({
     this.extra = const {},
   }) : next = true;
 
@@ -29,59 +27,99 @@ class HttpControllerBehavior {
 ///
 ///
 
+/// Appends log lines to date stamped files under [directory].
+///
+/// Files are opened lazily on the first write and reopened when the date
+/// changes, so a long running server keeps writing into the file for the
+/// current day instead of the one it started on.
 class LiteServerLogger {
-  LiteServerLogger({required String path}) : directory = Directory(path) {
-    _checkFilesAndCreate();
-  }
+  LiteServerLogger({required String path}) : directory = Directory(path);
 
   final Directory directory;
 
+  RandomAccessFile? _requests;
+  RandomAccessFile? _errors;
+  String? _openedFor;
+
+  /// Name of the log file for today, e.g. `04-09-2026.log`.
   String get fileName {
     final now = DateTime.now();
-    final year = now.year;
+    final year = now.year.toString().padLeft(4, '0');
     final month = now.month.toString().padLeft(2, '0');
     final day = now.day.toString().padLeft(2, '0');
     return '$day-$month-$year.log';
   }
 
-  late final logFileRequests = File('${directory.path}/requests/$fileName');
-  late final logFileErrors = File('${directory.path}/errors/$fileName');
+  File get logFileRequests => File('${directory.path}/requests/$fileName');
 
-  static RandomAccessFile? fileRequests;
-  static RandomAccessFile? fileErrors;
+  File get logFileErrors => File('${directory.path}/errors/$fileName');
 
-  void _checkFilesAndCreate() {
+  /// Opens today's files, rotating away from yesterday's if needed.
+  bool _openFiles() {
+    final today = fileName;
+
+    if (_openedFor == today && _requests != null && _errors != null) {
+      return true;
+    }
+
+    close();
+
     try {
-      if (!logFileRequests.existsSync()) {
-        logFileRequests.createSync(recursive: true);
+      final requests = logFileRequests;
+      final errors = logFileErrors;
+
+      if (!requests.existsSync()) {
+        requests.createSync(recursive: true);
       }
 
-      if (!logFileErrors.existsSync()) {
-        logFileErrors.createSync(recursive: true);
+      if (!errors.existsSync()) {
+        errors.createSync(recursive: true);
       }
 
-      fileRequests = logFileRequests.openSync(mode: FileMode.append);
-      fileErrors = logFileErrors.openSync(mode: FileMode.append);
+      _requests = requests.openSync(mode: FileMode.append);
+      _errors = errors.openSync(mode: FileMode.append);
+      _openedFor = today;
+
+      return true;
     } catch (e) {
       // ignore: avoid_print
       print('Error creating log files: $e');
+      return false;
     }
   }
 
-  void cleanLogs() {
+  /// Releases the open file handles. Safe to call more than once.
+  void close() {
     try {
-      directory.deleteSync(recursive: true);
+      _requests?.closeSync();
+      _errors?.closeSync();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error closing log files: $e');
+    }
+
+    _requests = null;
+    _errors = null;
+    _openedFor = null;
+  }
+
+  void cleanLogs() {
+    close();
+
+    try {
+      if (directory.existsSync()) {
+        directory.deleteSync(recursive: true);
+      }
     } catch (e) {
       // ignore: avoid_print
       print('Error cleaning logs: $e');
     }
   }
 
+  /// Collapses a log line onto a single line so one entry stays one row.
   String _clean(String line) {
-    final cleaned = line
-        .replaceAll(RegExp('\n+'), ', ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final cleaned =
+        line.replaceAll('\n', ', ').replaceAll(RegExp(r'\s+'), ' ').trim();
 
     if (cleaned.endsWith(',')) {
       return cleaned.substring(0, cleaned.length - 1);
@@ -91,28 +129,30 @@ class LiteServerLogger {
   }
 
   void appendErrorLine(String line) {
-    try {
-      fileErrors
-        ?..writeStringSync('${_clean(line)}\n')
-        ..flushSync();
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error writing to error log: $e');
-    }
+    _append(line, isError: true);
   }
 
   void appendRequestLine(String line) {
+    _append(line, isError: false);
+  }
+
+  void _append(String line, {required bool isError}) {
+    if (!_openFiles()) {
+      return;
+    }
+
     try {
-      fileRequests
+      (isError ? _errors : _requests)
         ?..writeStringSync('${_clean(line)}\n')
         ..flushSync();
     } catch (e) {
       // ignore: avoid_print
-      print('Error writing to request log: $e');
+      print('Error writing to log: $e');
     }
   }
 }
 
+/// Which log lines [LoggerController] persists to disk.
 enum LogLevel {
   all,
   errors,
@@ -120,54 +160,91 @@ enum LogLevel {
   none;
 }
 
+/// Logs one line per request and per unhandled error.
+///
+/// [level] controls what is written to disk and [printLogs] controls the
+/// console output, so file logging can be turned off without going silent and
+/// the other way around. No log directory is created until something is
+/// actually written.
 class LoggerController extends HttpController {
-  LoggerController({this.level = LogLevel.none, this.path = './logs'})
-      : logger = LiteServerLogger(path: path);
+  LoggerController({
+    this.level = LogLevel.none,
+    this.path = './logs',
+    this.printLogs = true,
+  }) : logger = LiteServerLogger(path: path);
 
   final LiteServerLogger logger;
   final LogLevel level;
   final String path;
 
+  /// Mirror every line to stdout.
+  final bool printLogs;
+
+  bool get _writesRequests =>
+      level == LogLevel.requests || level == LogLevel.all;
+
+  bool get _writesErrors => level == LogLevel.errors || level == LogLevel.all;
+
   String get time => DateTime.now().toIso8601String();
 
   @override
   FutureOr<HttpControllerBehavior> onRequest(HttpRequest request) {
+    if (!printLogs && !_writesRequests) {
+      return const HttpControllerBehavior.next();
+    }
+
     final clock = Stopwatch()..start();
+    final method = request.method;
+    final uri = request.uri;
+    final userAgent =
+        request.headers.value(HttpHeaders.userAgentHeader) ?? 'Unknown';
 
-    request.response.done.then((value) {
-      clock.stop();
+    unawaited(
+      request.response.done.then((_) {
+        clock.stop();
 
-      final line = [
-        time,
-        clock.elapsed.toString(),
-        request.method,
-        request.response.statusCode,
-        request.uri,
-        request.headers['user-agent'] ?? 'Unknown',
-      ].join(' | ');
+        final line = [
+          time,
+          clock.elapsed.toString(),
+          method,
+          request.response.statusCode,
+          uri,
+          userAgent,
+        ].join(' | ');
 
-      // ignore: avoid_print
-      print(line);
+        if (printLogs) {
+          // ignore: avoid_print
+          print(line);
+        }
 
-      if (level case LogLevel.requests || LogLevel.all) {
-        logger.appendRequestLine(line);
-      }
-    }).catchError((Object error) {
-      // ignore: avoid_print
-      print('Error in request logging: $error');
-    });
+        if (_writesRequests) {
+          logger.appendRequestLine(line);
+        }
+      }).catchError((Object error) {
+        if (printLogs) {
+          // ignore: avoid_print
+          print('Error in request logging: $error');
+        }
+      }),
+    );
 
-    return HttpControllerBehavior.next();
+    return const HttpControllerBehavior.next();
   }
 
   @override
   void onError(HttpRequest request, Object? error, StackTrace stackTrace) {
+    if (!printLogs && !_writesErrors) {
+      return;
+    }
+
     final line = [time, '${request.uri}', error, stackTrace].join(' | ');
 
-    // ignore: avoid_print
-    print(line);
+    if (printLogs) {
+      // ignore: avoid_print
+      print(line);
+    }
 
-    if (level case LogLevel.errors || LogLevel.all) {
+    if (_writesErrors) {
       logger.appendErrorLine(line);
     }
   }
@@ -175,6 +252,12 @@ class LoggerController extends HttpController {
 
 /// ! --------------------------------------------------------------------------
 
+/// Adds CORS headers and answers preflight requests.
+///
+/// `Access-Control-Allow-Origin` carries a single value: the request's own
+/// origin when it is allowed. Sending the whole allow list at once, or sending
+/// `*` next to `Access-Control-Allow-Credentials: true`, makes browsers reject
+/// the response outright.
 class CorsOriginController extends HttpController {
   CorsOriginController({
     this.allowedOrigins = const {'*'},
@@ -214,30 +297,55 @@ class CorsOriginController extends HttpController {
 
   @override
   FutureOr<HttpControllerBehavior> onRequest(HttpRequest request) {
+    final response = request.response;
+    final origin = request.headers.value('origin');
+    final allowsAnyOrigin = allowedOrigins.contains('*');
+    final isPreflight = request.method == 'OPTIONS';
+
     if (!allowedMethods.contains(request.method)) {
-      request.response.methodNotAllowed();
-      return HttpControllerBehavior.revoke();
+      response.headers.set(
+        HttpHeaders.allowHeader,
+        allowedMethods.join(', '),
+      );
+
+      response.methodNotAllowed().ignore();
+      return const HttpControllerBehavior.revoke();
     }
 
-    final corsHeaders = {
-      'Access-Control-Expose-Headers': [exposeHeaders],
-      'Access-Control-Allow-Credentials': ['$allowCredentials'],
-      'Access-Control-Allow-Origin': allowedOrigins.toList(),
-      'Access-Control-Max-Age': [maxAge.inSeconds.toString()],
-      'Access-Control-Allow-Headers': [allowedHeaders.join(',')],
-      'Access-Control-Allow-Methods': [allowedMethods.join(',')],
-    };
+    final isAllowedOrigin =
+        origin != null && (allowsAnyOrigin || allowedOrigins.contains(origin));
 
-    for (final header in corsHeaders.entries) {
-      request.response.headers.set(header.key, header.value);
+    if (isAllowedOrigin) {
+      if (allowsAnyOrigin && !allowCredentials) {
+        response.headers.set('Access-Control-Allow-Origin', '*');
+      } else {
+        /// The response now varies per origin, so caches must key on it.
+        response.headers
+          ..set('Access-Control-Allow-Origin', origin)
+          ..add(HttpHeaders.varyHeader, 'Origin');
+      }
+
+      if (allowCredentials) {
+        response.headers.set('Access-Control-Allow-Credentials', 'true');
+      }
+
+      if (exposeHeaders.isNotEmpty) {
+        response.headers.set('Access-Control-Expose-Headers', exposeHeaders);
+      }
     }
 
-    if (request.method == 'OPTIONS') {
-      request.response.statusCode = 204;
-      request.response.close();
-      return HttpControllerBehavior.revoke();
+    if (!isPreflight) {
+      return const HttpControllerBehavior.next();
     }
 
-    return HttpControllerBehavior.next();
+    response.headers
+      ..set('Access-Control-Allow-Headers', allowedHeaders.join(','))
+      ..set('Access-Control-Allow-Methods', allowedMethods.join(','))
+      ..set('Access-Control-Max-Age', maxAge.inSeconds.toString());
+
+    response.statusCode = HttpStatus.noContent;
+    response.close().ignore();
+
+    return const HttpControllerBehavior.revoke();
   }
 }
