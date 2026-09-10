@@ -12,7 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Route constructors take a named `path` argument instead of a positional one:
   `HttpRoute.get(path: '/users', ...)` and
   `HttpStaticRoute(path: '/assets', directoryPath: ...)`.
-- `HttpStaticRoute.allowedExtensions` is now a `Set<String>` (was `List<String>`).
+
+## [0.4.0] - 2026-09-04
+
+### Breaking Changes
+
 - Path parameters must be non-empty, so `/user/` no longer matches `/user/<id>`.
 - Invalid route configuration throws `ArgumentError` instead of `Exception`.
   Registering the same path and method twice is rejected at startup.
