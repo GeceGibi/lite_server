@@ -1,0 +1,12 @@
+---
+description: Never commit, tag, or push without explicit user approval
+alwaysApply: true
+---
+
+# Git: ask first
+
+- **Never** run `git commit`, `git tag`, `git push`, or rewrite tags/history unless the user explicitly asks in that message.
+- Preparing a commit message, staging preview, or `git status` / `git diff` is fine.
+- If a release or version bump is ready, stop and ask: commit? tag? push?
+- "version oluştur", "changelog yaz", "düzelt" alone do **not** authorize a commit.
+- Only phrases like "commit at", "commit et", "commit yap", "tag at", "push et" count as approval.
