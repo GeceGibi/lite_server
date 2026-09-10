@@ -11,18 +11,18 @@ void main() {
       final server = LiteServer(
         routes: [
           const HttpRoute.get(
-            '/',
+            path: '/',
             handler: _noop,
             routes: [
               HttpRoute.get(
-                'api',
+                path: 'api',
                 routes: [
-                  HttpRoute.get('users', handler: _noop),
+                  HttpRoute.get(path: 'users', handler: _noop),
                 ],
               ),
             ],
           ),
-          const HttpRoute.get('/user/<id>/posts', handler: _noop),
+          const HttpRoute.get(path: '/user/<id>/posts', handler: _noop),
         ],
       );
 
@@ -35,8 +35,8 @@ void main() {
     test('keeps routes that share a path but not a method', () {
       final server = LiteServer(
         routes: [
-          const HttpRoute.get('/user/<id>', handler: _noop),
-          const HttpRoute.post('/user/<id>', handler: _noop),
+          const HttpRoute.get(path: '/user/<id>', handler: _noop),
+          const HttpRoute.post(path: '/user/<id>', handler: _noop),
         ],
       );
 
@@ -47,8 +47,8 @@ void main() {
       expect(
         () => LiteServer(
           routes: [
-            const HttpRoute.get('/user', handler: _noop),
-            const HttpRoute.all('/user', handler: _noop),
+            const HttpRoute.get(path: '/user', handler: _noop),
+            const HttpRoute.all(path: '/user', handler: _noop),
           ],
         ),
         throwsA(isA<ArgumentError>()),
@@ -58,7 +58,7 @@ void main() {
     test('rejects a duplicated path parameter name', () {
       expect(
         () => LiteServer(
-          routes: [const HttpRoute.get('/<id>/<id>', handler: _noop)],
+          routes: [const HttpRoute.get(path: '/<id>/<id>', handler: _noop)],
         ),
         throwsA(isA<ArgumentError>()),
       );
@@ -69,8 +69,8 @@ void main() {
         () => LiteServer(
           routes: [
             const HttpRoute.get(
-              '/a',
-              routes: [HttpRoute.get('/b', handler: _noop)],
+              path: '/a',
+              routes: [HttpRoute.get(path: '/b', handler: _noop)],
             ),
           ],
         ),
@@ -80,7 +80,9 @@ void main() {
 
     test('rejects a top level path without a leading slash', () {
       expect(
-        () => LiteServer(routes: [const HttpRoute.get('a', handler: _noop)]),
+        () => LiteServer(
+          routes: [const HttpRoute.get(path: 'a', handler: _noop)],
+        ),
         throwsA(isA<ArgumentError>()),
       );
     });
@@ -94,37 +96,37 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/user/<id>',
+              path: '/user/<id>',
               handler: (request, payload) => request.response
                   .json({'method': 'GET', ...payload.pathParameters}),
             ),
             HttpRoute.post(
-              '/user/<id>',
+              path: '/user/<id>',
               handler: (request, payload) => request.response
                   .json({'method': 'POST', ...payload.pathParameters}),
             ),
             HttpRoute.get(
-              '/user/settings',
+              path: '/user/settings',
               handler: (request, payload) =>
                   request.response.json({'exact': true}),
             ),
             HttpRoute.get(
-              '/report.json',
+              path: '/report.json',
               handler: (request, payload) =>
                   request.response.json({'literal': true}),
             ),
             HttpRoute.get(
-              '/files/<a>/<b>',
+              path: '/files/<a>/<b>',
               handler: (request, payload) =>
                   request.response.json(payload.pathParameters),
             ),
             HttpRoute.put(
-              '/things/<id>',
+              path: '/things/<id>',
               handler: (request, payload) =>
                   request.response.json({'put': true}),
             ),
             HttpRoute(
-              '/lowercase',
+              path: '/lowercase',
               methods: const {'get'},
               handler: (request, payload) =>
                   request.response.json({'ok': true}),

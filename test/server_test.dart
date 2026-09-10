@@ -39,7 +39,7 @@ void main() {
           maxRequestSize: 16,
           routes: [
             HttpRoute.post(
-              '/echo',
+              path: '/echo',
               handler: (request, payload) async {
                 final body = await request.readBodyAsString();
                 await request.response.ok(body: body);
@@ -61,7 +61,7 @@ void main() {
           maxRequestSize: 16,
           routes: [
             HttpRoute.post(
-              '/echo',
+              path: '/echo',
               handler: (request, payload) async {
                 final body = await request.readBodyAsString();
                 await request.response.ok(body: body);
@@ -88,7 +88,7 @@ void main() {
           maxRequestSize: 64,
           routes: [
             HttpRoute.post(
-              '/echo',
+              path: '/echo',
               handler: (request, payload) async {
                 final body = await request.readBodyAsString();
                 await request.response.ok(body: body);
@@ -114,7 +114,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/x',
+              path: '/x',
               controllers: [_RecordingController('route', log)],
               handler: (request, payload) => request.response.json(
                 payload.extras.keys.toList(),
@@ -139,7 +139,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/x',
+              path: '/x',
               handler: (request, payload) =>
                   request.response.ok(body: 'reached'),
             ),
@@ -162,7 +162,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/boom',
+              path: '/boom',
               handler: (request, payload) => throw StateError('x'),
             ),
           ],
@@ -184,7 +184,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/boom',
+              path: '/boom',
               handler: (request, payload) => throw StateError('x'),
             ),
           ],
@@ -204,14 +204,14 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/late',
+              path: '/late',
               handler: (request, payload) async {
                 await request.response.ok(body: 'sent');
                 throw StateError('after close');
               },
             ),
             HttpRoute.get(
-              '/ping',
+              path: '/ping',
               handler: (request, payload) => request.response.ok(body: 'pong'),
             ),
           ],
@@ -231,7 +231,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/boom',
+              path: '/boom',
               handler: (request, payload) => throw StateError('x'),
             ),
           ],
@@ -257,7 +257,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/boom',
+              path: '/boom',
               handler: (request, payload) => throw StateError('x'),
             ),
           ],
@@ -298,7 +298,7 @@ void main() {
           requestTimeout: const Duration(milliseconds: 150),
           routes: [
             HttpRoute.get(
-              '/slow',
+              path: '/slow',
               handler: (request, payload) => Completer<void>().future,
             ),
           ],
@@ -318,7 +318,7 @@ void main() {
           requestTimeout: const Duration(milliseconds: 500),
           routes: [
             HttpRoute.get(
-              '/quick',
+              path: '/quick',
               handler: (request, payload) => request.response.ok(body: 'fast'),
             ),
           ],
@@ -345,7 +345,7 @@ void main() {
     final subscription = LiteServer(
       routes: [
         HttpRoute.get(
-          '/x',
+          path: '/x',
           handler: (request, payload) => request.response.ok(),
         ),
       ],

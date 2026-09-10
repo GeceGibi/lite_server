@@ -2,65 +2,65 @@ part of 'lite_server.dart';
 
 ///! ---------------------------------------------------------------------------
 class HttpRoute {
-  const HttpRoute(
-    this.path, {
+  const HttpRoute({
+    required this.path,
     required this.methods,
     this.handler,
     this.controllers,
     this.routes,
   });
 
-  const HttpRoute.get(
-    this.path, {
+  const HttpRoute.get({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'GET'};
 
-  const HttpRoute.post(
-    this.path, {
+  const HttpRoute.post({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'POST'};
 
-  const HttpRoute.put(
-    this.path, {
+  const HttpRoute.put({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'PUT'};
 
-  const HttpRoute.patch(
-    this.path, {
+  const HttpRoute.patch({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'PATCH'};
 
-  const HttpRoute.delete(
-    this.path, {
+  const HttpRoute.delete({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'DELETE'};
 
-  const HttpRoute.head(
-    this.path, {
+  const HttpRoute.head({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'HEAD'};
 
-  const HttpRoute.options(
-    this.path, {
+  const HttpRoute.options({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
   }) : methods = const {'OPTIONS'};
 
-  const HttpRoute.all(
-    this.path, {
+  const HttpRoute.all({
+    required this.path,
     this.handler,
     this.controllers,
     this.routes,
@@ -101,8 +101,8 @@ class HttpRoute {
 /// files outside the directory. Resolved files are additionally checked against
 /// the real directory path, which also blocks symlinks pointing outside of it.
 class HttpStaticRoute extends HttpRoute {
-  HttpStaticRoute(
-    super.path, {
+  HttpStaticRoute({
+    required super.path,
     required String directoryPath,
     super.methods = const {'GET', 'HEAD'},
     super.controllers,

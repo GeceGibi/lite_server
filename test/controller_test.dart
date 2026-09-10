@@ -11,7 +11,7 @@ void main() {
       LiteServer(
         routes: [
           HttpRoute.all(
-            '/x',
+            path: '/x',
             handler: (request, payload) => request.response.ok(body: 'ok'),
           ),
         ],
@@ -148,7 +148,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/x',
+              path: '/x',
               handler: (request, payload) => request.response.ok(),
             ),
           ],
@@ -179,7 +179,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/x',
+              path: '/x',
               handler: (request, payload) => request.response.ok(),
             ),
           ],

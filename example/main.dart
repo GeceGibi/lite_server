@@ -12,26 +12,26 @@ void main(List<String> arguments) async {
     routes: [
       homeRoute,
       HttpRoute.get(
-        '/api',
+        path: '/api',
         routes: [
           HttpRoute.get(
-            'users',
+            path: 'users',
             handler: (request, payload) => request.response.json(<Object>[]),
           ),
         ],
       ),
       HttpRoute.get(
-        '/user/<id>',
+        path: '/user/<id>',
         handler: (request, payload) =>
             request.response.json(payload.pathParameters),
         routes: [
           HttpRoute.get(
-            '<pack>',
+            path: '<pack>',
             handler: (request, payload) =>
                 request.response.json(payload.pathParameters),
             routes: [
               HttpRoute.get(
-                '<dept>',
+                path: '<dept>',
                 handler: (request, payload) =>
                     request.response.json(payload.pathParameters),
               ),
@@ -40,7 +40,7 @@ void main(List<String> arguments) async {
         ],
       ),
       HttpRoute.post(
-        '/user/<id>',
+        path: '/user/<id>',
         handler: (request, payload) async {
           final body = await request.readBodyAsJson<Map<String, Object?>>();
 
@@ -51,7 +51,7 @@ void main(List<String> arguments) async {
         },
       ),
       HttpRoute.post(
-        '/upload',
+        path: '/upload',
         handler: (request, payload) async {
           final received = <String>[];
 
@@ -67,13 +67,13 @@ void main(List<String> arguments) async {
         },
       ),
       HttpStaticRoute(
-        '/images',
+        path: '/images',
         directoryPath: 'assets/images/',
         listDirectory: true,
         allowedExtensions: {'jpg', 'png', 'gif'},
       ),
       HttpStaticRoute(
-        '/web',
+        path: '/web',
         directoryPath: 'assets/web/',
         defaultDocument: 'index.html',
       ),

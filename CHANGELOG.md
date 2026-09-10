@@ -1,85 +1,86 @@
 # Changelog
 
-## [0.4.0] - 2026-09-04
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2026-09-10
+
+### Breaking Changes
+
+- Route constructors take a named `path` argument instead of a positional one:
+  `HttpRoute.get(path: '/users', ...)` and
+  `HttpStaticRoute(path: '/assets', directoryPath: ...)`.
+- `HttpStaticRoute.allowedExtensions` is now a `Set<String>` (was `List<String>`).
+- Path parameters must be non-empty, so `/user/` no longer matches `/user/<id>`.
+- Invalid route configuration throws `ArgumentError` instead of `Exception`.
+  Registering the same path and method twice is rejected at startup.
+- Static routes serve `GET` and `HEAD` by default (was `GET` only).
 
 ### Fixed
 
-- Routes are now keyed by path *and* method. `GET /user/<id>` and
-  `POST /user/<id>` used to overwrite each other in the route map, leaving one
-  of them unreachable behind a `405`.
-- The request size limit is enforced while the body is read. A chunked request
-  without a `Content-Length` previously bypassed it completely.
-- Path parameters accept and decode percent encoded values, so
-  `/user/John%20Doe` matches `/user/<id>` and yields `John Doe`.
-- Literal characters in a route path are escaped, so `/report.json` no longer
-  matches `/reportxjson`.
+- Routes are keyed by path **and** method. `GET /user/<id>` and `POST /user/<id>`
+  used to overwrite each other in the route map, leaving one unreachable behind
+  a `405`.
+- Request size limits are enforced while the body is read. A chunked request
+  without `Content-Length` previously bypassed the limit entirely.
+- Path parameters accept and decode percent-encoded values
+  (`/user/John%20Doe` → `id: John Doe`).
+- Literal characters in route paths are escaped (`/report.json` no longer
+  matches `/reportxjson`).
 - A path parameter can no longer capture across `/`.
-- The request timeout timer is always cancelled. Returning early on an
-  oversized request used to leak a timer that fired 30 seconds later.
-- An error raised after the response was closed no longer produces an
-  unhandled asynchronous error while trying to send a `500`.
-- `onError` passed to `listen` was accepted and then ignored; it is now used as
-  a fallback error handler.
-- Static routes matched any path with the mount as a prefix, so `/imagesEVIL`
-  resolved to the `/images` mount. Only the mount itself and paths below it
-  match now.
-- Static routes nested under a parent route stripped the wrong prefix and could
-  never find their files.
-- Directory listings escape file names, closing an HTML injection hole, and
-  hide dotfiles such as `.env`.
-- `Access-Control-Allow-Origin` carries a single origin instead of the whole
-  allow list, and is never sent as `*` together with
-  `Access-Control-Allow-Credentials: true`. Responses that vary by origin now
-  send `Vary: Origin`.
-- Response messages are stripped of control characters, so a message can no
-  longer inject headers into the status line.
+- The request timeout timer is always cancelled (early returns previously
+  leaked a timer that fired ~30s later).
+- Errors raised after the response is closed no longer produce an unhandled
+  asynchronous error while trying to send a `500`.
+- `onError` passed to `listen` is used as a fallback error handler (it was
+  accepted and ignored).
+- Static routes only match the mount path and paths under it
+  (`/imagesEVIL` no longer hits `/images`).
+- Nested static routes no longer strip the wrong path prefix.
+- Directory listings HTML-escape file names and hide dotfiles (e.g. `.env`).
+- CORS: `Access-Control-Allow-Origin` echoes a single allowed origin, never
+  pairs `*` with credentials, and sends `Vary: Origin` when the origin varies.
+- Response messages are stripped of control characters (no status-line header
+  injection).
 - `status()` keeps a content type set earlier instead of clearing it.
-- `LiteServerLogger` used static file handles, so two loggers wrote to one
-  file. Handles are per instance now and are rolled over daily instead of
-  being pinned to the day the server started.
-- `LoggerController` no longer creates a log directory when nothing will be
-  written to it.
-- Multipart parts are collected through a `BytesBuilder` instead of being
-  rebuilt per chunk, removing quadratic cost on large uploads, and parts are
-  streamed as they arrive.
-- `content-disposition` values split on their first `=` only, so a file name
-  containing `=` survives.
-- `isMultipart` checks the media type instead of only looking for a boundary.
-- An unknown MIME type serves as `application/octet-stream` rather than
-  failing with a `500`.
-- `analysis_options.yaml` disabled lints through a rule map, which replaced the
-  included rule set instead of merging with it. Disables moved to
-  `analyzer: errors:`.
+- `LiteServerLogger` file handles are per-instance and roll over daily (they
+  were static and shared across loggers).
+- `LoggerController` does not create a log directory when nothing will be
+  written.
+- Multipart parts use `BytesBuilder` and stream as they arrive (no O(n²)
+  rebuild per chunk).
+- `content-disposition` splits on the first `=` only (file names with `=`
+  survive).
+- `isMultipart` checks the media type, not only a boundary parameter.
+- Unknown MIME types serve as `application/octet-stream` instead of `500`.
+- `analysis_options.yaml` lint disables moved to `analyzer: errors:` so they
+  merge with the included rule set.
 
 ### Added
 
-- `HttpRoute.put`, `.patch`, `.delete`, `.head` and `.options`
-- `HttpRoutePayload.path`, `.parameter()` and `.extra<T>()`
+- `HttpRoute.put`, `.patch`, `.delete`, `.head`, and `.options`
+- `HttpRoutePayload.path`, `.parameter()`, and `.extra<T>()`
 - `readBodyAsBytes()`, `readBodyAsJson<T>()`
-- `HttpMultiPartData.name`, `.filename`, `.contentType`, `.isFile` and `.text()`
-- `response.text()`, and an optional `message` on the error helpers
+- `HttpMultiPartData.name`, `.filename`, `.contentType`, `.isFile`, and `.text()`
+- `response.text()`, and optional `message` on error helpers
 - `HttpRequestTooLargeException` and `HttpMultipartException`
 - `LoggerController.printLogs` and `LiteServerLogger.close()`
-- `405` responses carry an `Allow` header
-- Static routes answer `HEAD`, send `Last-Modified` and honour
-  `If-Modified-Since`
-- A test suite covering routing, request handling, static file security, CORS,
-  logging and multipart parsing
+- `405` responses include an `Allow` header
+- Static routes honour `If-Modified-Since` / `Last-Modified` (`304`)
+- Test suite for routing, request handling, static-file security, CORS,
+  logging, and multipart parsing
 
 ### Changed
 
-- Files are streamed instead of being read into memory, both by
-  `response.file()` and by static routes.
-- Route patterns are compiled once at startup rather than rebuilt per request.
-- `listen` returns its `StreamSubscription` and takes `logStartup`.
-- Method matching is case insensitive.
+- Files are streamed instead of buffered in memory (`response.file()` and
+  static routes).
+- Route patterns are compiled once at startup.
+- `listen` returns its `StreamSubscription` and accepts `logStartup`.
+- Method matching is case-insensitive.
 - Trailing slashes are ignored when matching.
 - A `message` without a `body` is written as the response body.
-- Path parameters must be non-empty, so `/user/` no longer matches
-  `/user/<id>`.
-- Invalid route configuration throws `ArgumentError` instead of `Exception`,
-  and a duplicate path and method pair is now rejected.
-- Static routes serve `GET` and `HEAD` by default.
 
 ## [0.3.0] - 2024-12-19
 
@@ -96,7 +97,6 @@
 
 - Updated dependencies.
 - Updated `response.ok()`
-
 
 ## [0.2.3] - 2024-10-20
 
@@ -125,7 +125,6 @@
 - Renamed `HttpService` to `HttpController` and update error handle logic
 - Renamed `HttpServiceBehavior` to `HttpControllerBehavior`
 
-
 ## [0.1.2] - 2024-05-20
 
 - Updated Example
@@ -141,11 +140,11 @@
 
 ## [0.0.9] - 2024-03-25
 
-- Added missing `service` argument for `HttpStaticRoute` 
+- Added missing `service` argument for `HttpStaticRoute`
 
 ## [0.0.8] - 2024-03-10
 
-- Updated `CorsOriginService` 
+- Updated `CorsOriginService`
 
 ## [0.0.7] - 2024-02-20
 
@@ -179,5 +178,3 @@
 ## [0.0.1] - 2023-12-01
 
 - Initial version.
-
-

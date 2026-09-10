@@ -45,35 +45,36 @@ void main(List<String> arguments) async {
   final liteServer = LiteServer(
     routes: [
       HttpRoute.get(
-        '/',
+        path: '/',
         handler: (request, payload) => request.response.html('<h1>Home</h1>'),
         routes: [
           HttpRoute.get(
-            'api',
+            path: 'api',
             routes: [
               HttpRoute.get(
-                'users',
-                handler: (request, payload) => request.response.json(<Object>[]),
+                path: 'users',
+                handler: (request, payload) =>
+                    request.response.json(<Object>[]),
               ),
             ],
           ),
         ],
       ),
       HttpRoute.get(
-        '/user/<id>',
+        path: '/user/<id>',
         handler: (request, payload) => request.response.json(
           {'id': payload.parameter('id')},
         ),
       ),
       HttpRoute.post(
-        '/user/<id>',
+        path: '/user/<id>',
         handler: (request, payload) async {
           final body = await request.readBodyAsJson<Map<String, Object?>>();
           await request.response.json({'id': payload.parameter('id'), ...body});
         },
       ),
       HttpRoute.post(
-        '/upload',
+        path: '/upload',
         handler: (request, payload) async {
           await for (final part in request.multipartData()) {
             if (part.isFile) {
@@ -87,13 +88,13 @@ void main(List<String> arguments) async {
         },
       ),
       HttpStaticRoute(
-        '/images',
+        path: '/images',
         directoryPath: 'assets/images/',
         listDirectory: true,
-        allowedExtensions: ['jpg', 'png', 'gif'],
+        allowedExtensions: {'jpg', 'png', 'gif'},
       ),
       HttpStaticRoute(
-        '/web',
+        path: '/web',
         directoryPath: 'assets/web/',
         defaultDocument: 'index.html',
       ),
@@ -139,6 +140,13 @@ Top level paths start with `/`, nested paths do not. A route without a handler
 only groups its children, and controllers are inherited by everything nested
 under a route.
 
+`path` is a named argument on every route constructor:
+
+```dart
+HttpRoute.get(path: '/users', handler: ...);
+HttpStaticRoute(path: '/assets', directoryPath: 'public/');
+```
+
 A `<name>` placeholder matches exactly one path segment. Values are percent
 decoded, so `/user/John%20Doe` gives `id` the value `John Doe`. Matching goes
 from most to least specific: literal paths first, then paths with placeholders,
@@ -166,8 +174,10 @@ startup line.
 
 ### HttpStaticRoute
 
+- `path`: Mount path
 - `directoryPath`: Directory to serve
-- `allowedExtensions`: Allowed file extensions, with or without a leading dot
+- `allowedExtensions`: Allowed file extensions as a `Set<String>`, with or
+  without a leading dot
 - `listDirectory`: Enable directory listing
 - `defaultDocument`: Document served for a directory
 

@@ -15,46 +15,46 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/json',
+              path: '/json',
               handler: (request, payload) =>
                   request.response.json({'name': 'ünïcödé'}),
             ),
             HttpRoute.get(
-              '/json-created',
+              path: '/json-created',
               handler: (request, payload) => request.response.json(
                 {'id': 1},
                 code: HttpStatus.created,
               ),
             ),
             HttpRoute.get(
-              '/text',
+              path: '/text',
               handler: (request, payload) => request.response.text('plain'),
             ),
             HttpRoute.get(
-              '/html',
+              path: '/html',
               handler: (request, payload) => request.response.html('<b>hi</b>'),
             ),
             HttpRoute.get(
-              '/message-only',
+              path: '/message-only',
               handler: (request, payload) =>
                   request.response.badRequest('missing field'),
             ),
             HttpRoute.get(
-              '/injected',
+              path: '/injected',
               handler: (request, payload) => request.response.status(
                 HttpStatus.badRequest,
                 message: 'bad\r\nx-injected: yes',
               ),
             ),
             HttpRoute.get(
-              '/keeps-content-type',
+              path: '/keeps-content-type',
               handler: (request, payload) {
                 request.response.headers.contentType = ContentType.html;
                 return request.response.status(HttpStatus.ok, body: '<i>x</i>');
               },
             ),
             HttpRoute.get(
-              '/missing-file',
+              path: '/missing-file',
               handler: (request, payload) =>
                   request.response.file('does/not/exist.txt'),
             ),
@@ -133,7 +133,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/f',
+              path: '/f',
               handler: (request, payload) => request.response.file(target.path),
             ),
           ],
@@ -154,7 +154,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.post(
-              '/in',
+              path: '/in',
               handler: (request, payload) async {
                 final data =
                     await request.readBodyAsJson<Map<String, Object?>>();
@@ -181,7 +181,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.post(
-              '/probe',
+              path: '/probe',
               handler: (request, payload) =>
                   request.response.json({'multipart': request.isMultipart}),
             ),
@@ -226,7 +226,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.post(
-              '/upload',
+              path: '/upload',
               handler: (request, payload) async {
                 final parts = <Map<String, Object?>>[];
 
@@ -329,7 +329,7 @@ void main() {
           maxRequestSize: 512,
           routes: [
             HttpRoute.post(
-              '/upload',
+              path: '/upload',
               handler: (request, payload) async {
                 await request.multipartData().drain<void>();
                 await request.response.ok();
@@ -365,7 +365,7 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.post(
-              '/upload',
+              path: '/upload',
               handler: (request, payload) async {
                 await request.multipartData().drain<void>();
                 await request.response.ok();

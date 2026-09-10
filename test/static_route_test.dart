@@ -38,7 +38,7 @@ void main() {
         routes: [
           ...extraRoutes,
           HttpStaticRoute(
-            mount,
+            path: mount,
             directoryPath: public.path,
             defaultDocument: defaultDocument,
             listDirectory: listDirectory,
@@ -135,9 +135,9 @@ void main() {
         LiteServer(
           routes: [
             HttpRoute.get(
-              '/api',
+              path: '/api',
               routes: [
-                HttpStaticRoute('files', directoryPath: public.path),
+                HttpStaticRoute(path: 'files', directoryPath: public.path),
               ],
             ),
           ],
@@ -196,8 +196,8 @@ void main() {
       final server = await TestServer.start(
         LiteServer(
           routes: [
-            HttpStaticRoute('/assets', directoryPath: public.path),
-            HttpStaticRoute('/other', directoryPath: other.path),
+            HttpStaticRoute(path: '/assets', directoryPath: public.path),
+            HttpStaticRoute(path: '/other', directoryPath: other.path),
           ],
         ),
       );
