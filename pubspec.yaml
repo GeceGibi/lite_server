@@ -1,6 +1,6 @@
 name: lite_server
 description: A lightweight, secure, and high-performance HTTP server wrapper for Dart with built-in security features, request timeout protection, static file serving, CORS support, and comprehensive logging capabilities.
-version: 0.4.0
+version: 0.4.1
 repository: https://github.com/GeceGibi/lite_server.git
 
 environment:
