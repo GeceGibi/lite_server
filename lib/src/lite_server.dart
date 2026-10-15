@@ -11,6 +11,12 @@ part 'utils.dart';
 part 'extensions.dart';
 part 'models.dart';
 
+typedef HttpErrorCallback = void Function(
+  HttpRequest request,
+  Object? error,
+  StackTrace stackTrace,
+);
+
 class LiteServer {
   LiteServer({
     this.routes = const [],
@@ -27,11 +33,7 @@ class LiteServer {
 
   final List<HttpRoute> routes;
   final FutureOr<void> Function(HttpRequest request)? onRouteNotFound;
-  final void Function(
-    HttpRequest request,
-    Object? error,
-    StackTrace stackTrace,
-  )? onError;
+  final HttpErrorCallback? onError;
 
   /// Maximum number of body bytes accepted per request. Enforced both from
   /// `Content-Length` and while the body is being read, so a chunked upload
@@ -67,8 +69,7 @@ class LiteServer {
   StreamSubscription<HttpRequest> listen(
     HttpServer server, {
     List<HttpController> controllers = const [],
-    void Function(HttpRequest request, Object? error, StackTrace stackTrace)?
-        onError,
+    HttpErrorCallback? onError,
     bool logStartup = true,
   }) {
     this.controllers = controllers;
@@ -235,17 +236,34 @@ class LiteServer {
     return _handle(request, controllers);
   }
 
+  /// Runs [controllers] in order. Returns `false` when one of them stops the
+  /// request.
+  Future<bool> _runControllers(
+    List<HttpController> controllers,
+    HttpRequest request,
+    Map<String, Object?> extras,
+    List<HttpErrorCallback> errorListeners,
+  ) async {
+    for (final controller in controllers) {
+      errorListeners.add(controller.onError);
+      final behavior = await controller.onRequest(request);
+
+      if (!behavior.next) {
+        return false;
+      }
+
+      extras.addAll(behavior.extra);
+    }
+
+    return true;
+  }
+
   Future<void> _handle(
     HttpRequest request,
     List<HttpController> globalControllers, [
-    void Function(HttpRequest request, Object? error, StackTrace stackTrace)?
-        listenOnError,
+    HttpErrorCallback? listenOnError,
   ]) async {
-    final errorListeners = <void Function(
-      HttpRequest request,
-      Object? error,
-      StackTrace stackTrace,
-    )>[];
+    final errorListeners = <HttpErrorCallback>[];
 
     var timedOut = false;
 
@@ -276,15 +294,13 @@ class LiteServer {
       final extras = <String, Object?>{};
 
       /// Global controllers run for every request, matched or not.
-      for (final controller in globalControllers) {
-        errorListeners.add(controller.onError);
-        final behavior = await controller.onRequest(request);
-
-        if (!behavior.next) {
-          return;
-        }
-
-        extras.addAll(behavior.extra);
+      if (!await _runControllers(
+        globalControllers,
+        request,
+        extras,
+        errorListeners,
+      )) {
+        return;
       }
 
       final resolution = _resolve(request.uri.path, request.method);
@@ -311,15 +327,13 @@ class LiteServer {
         return;
       }
 
-      for (final controller in mapper.controllers) {
-        errorListeners.add(controller.onError);
-        final behavior = await controller.onRequest(request);
-
-        if (!behavior.next) {
-          return;
-        }
-
-        extras.addAll(behavior.extra);
+      if (!await _runControllers(
+        mapper.controllers,
+        request,
+        extras,
+        errorListeners,
+      )) {
+        return;
       }
 
       await mapper.route.handler!(
