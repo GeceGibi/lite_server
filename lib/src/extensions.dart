@@ -144,8 +144,11 @@ extension HttpRequestHelpers on HttpRequest {
     return builder.takeBytes();
   }
 
-  Future<String> readBodyAsString([Encoding? encoding]) async {
-    return (encoding ?? utf8).decode(await readBodyAsBytes());
+  /// Buffers the whole body and decodes it as text.
+  ///
+  /// [maxSize] overrides [maxBodySize] for this call.
+  Future<String> readBodyAsString([Encoding? encoding, int? maxSize]) async {
+    return (encoding ?? utf8).decode(await readBodyAsBytes(maxSize: maxSize));
   }
 
   /// Reads the body and decodes it as JSON.
